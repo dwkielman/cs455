@@ -1,5 +1,13 @@
 package cs455.overlay.node;
 
-public class MessagingNode {
+import cs455.overlay.wireformats.Event;
+
+public class MessagingNode implements Node {
+
+	@Override
+	public void onEvent(Event event) {
+		// TODO Auto-generated method stub
+		
+	}
 
 }
