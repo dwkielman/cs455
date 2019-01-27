@@ -2,6 +2,12 @@ package cs455.overlay.node;
 
 import cs455.overlay.wireformats.Event;
 
+/**
+ * The registry maintains information about the registered messaging nodes in a registry; you can use any
+ * data structure for managing this registry but make sure that your choice can support all the operations
+ * that you will need.
+ */
+
 public class Registry implements Node {
 
 	@Override
@@ -21,5 +27,6 @@ public class Registry implements Node {
 	
 	// Assign and publish weights to the links connecting any two messaging nodes in the overlay. The weights these links take will range from 1-10.
 	
+	// java cs455.overlay.node.Registry portnum
 	
 }

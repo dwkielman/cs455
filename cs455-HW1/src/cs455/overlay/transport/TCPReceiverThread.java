@@ -16,6 +16,7 @@ public class TCPReceiverThread {
 			this.socket = socket;
 			din = new DataInputStream(socket.getInputStream());
 		}
+		
 		@Override
 		public void run() {
 			
@@ -30,12 +31,10 @@ public class TCPReceiverThread {
 					System.out.println(se.getMessage());
 					break;
 				} catch (IOException ioe) {
-					System.out.println(ioe.getMessage()) ;
+					System.out.println(ioe.getMessage());
 					break;
 				}
 			}
 		}
 	}
-		
-	
 }
