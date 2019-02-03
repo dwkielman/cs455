@@ -22,11 +22,12 @@ public class EventFactory {
 		return eventFactory;
 	}
 	
-	public Event createEvent(byte[] marshalledBytes, Node node) {
+	public void createEvent(byte[] marshalledBytes, Node node) {
 		ByteArrayInputStream baInputStream = new ByteArrayInputStream(marshalledBytes);
 		DataInputStream din = new DataInputStream(new BufferedInputStream(baInputStream));
 		
 		try {
+			Event event;
 			int type = din.readInt();
 			baInputStream.close();
 			din.close();
@@ -38,45 +39,56 @@ public class EventFactory {
 			switch(type) {
 				// REGISTER_REQUEST = 6000
 				case Protocol.REGISTER_REQUEST:
-					return new RegisterRequest(marshalledBytes);
+					event = new RegisterRequest(marshalledBytes);
+					break;
 				// REGISTER_RESPONSE = 6001
 				case Protocol.REGISTER_RESPONSE:
-					return new RegisterResponse(marshalledBytes);	
+					event = new RegisterResponse(marshalledBytes);	
+					break;
 				// DEREGISTER_REQUEST = 6002
 				case Protocol.DEREGISTER_REQUEST:
-					return new DeregisterRequest(marshalledBytes);
+					event = new DeregisterRequest(marshalledBytes);
+					break;
 				// DEREGISTER_RESPONSE = 6003
 				case Protocol.DEREGISTER_RESPONSE:
-					return new DeregisterResponse(marshalledBytes);
+					event = new DeregisterResponse(marshalledBytes);
+					break;
 				// MESSAGING_NODES_LIST = 6004
 				case Protocol.MESSAGING_NODES_LIST:
-					return new MessagingNodesList(marshalledBytes);
+					event = new MessagingNodesList(marshalledBytes);
+					break;
 				// LINK_WEIGHTS = 6005
 				case Protocol.LINK_WEIGHTS:
-					return new LinkWeights(marshalledBytes);
+					event = new LinkWeights(marshalledBytes);
+					break;
 				// TASK_INITIATE = 6006
 				case Protocol.TASK_INITIATE:
-					return new TaskInitiate(marshalledBytes);
+					event = new TaskInitiate(marshalledBytes);
+					break;
 				// TASK_COMPLETE = 6007
 				case Protocol.TASK_COMPLETE:
-					return new TaskComplete(marshalledBytes);
+					event = new TaskComplete(marshalledBytes);
+					break;
 				// PULL_TRAFFIC_SUMMARY = 6008
 				case Protocol.PULL_TRAFFIC_SUMMARY:
-					return new TaskSummaryRequest(marshalledBytes);
+					event = new TaskSummaryRequest(marshalledBytes);
+					break;
 				// TRAFFIC_SUMMARY = 6009
 				case Protocol.TRAFFIC_SUMMARY:
-					return new TaskSummaryResponse(marshalledBytes);
+					event = new TaskSummaryResponse(marshalledBytes);
+					break;
 				// MESSAGE = 6010
 				case Protocol.MESSAGE:
-					return new Message(marshalledBytes);
+					event = new Message(marshalledBytes);
+					break;
 				default:
 					System.out.println("Invalid Message Type");
-					return null;
+					return;
 			}
+			node.onEvent(event);
 		} catch (IOException ioe) {
 			ioe.printStackTrace();
 		}
-		return null;
 	}
 
 }
