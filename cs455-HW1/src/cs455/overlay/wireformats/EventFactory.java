@@ -65,7 +65,7 @@ public class EventFactory {
 					return new TaskSummaryRequest(marshalledBytes);
 				// TRAFFIC_SUMMARY = 6009
 				case Protocol.TRAFFIC_SUMMARY:
-					return new TrafficSummaryRequest(marshalledBytes);
+					return new TaskSummaryResponse(marshalledBytes);
 				// MESSAGE = 6010
 				case Protocol.MESSAGE:
 					return new Message(marshalledBytes);
