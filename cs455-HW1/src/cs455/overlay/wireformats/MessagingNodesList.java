@@ -14,9 +14,9 @@ import java.util.ArrayList;
  * This Protocol represents a message sent from the Registry to the Messaging Nodes regarding the neighbors of a given Messaging Node to connect to its neighboring Messaging Nodes
  * Message Type (int): MESSAGING_NODES_LIST (6004)
  * Number of peer messaging nodes (int): X
- * Messaging node1 Info
+ * Messaging node1 Info (ArrayList<String>)
  * Messaging node2 Info
- * …..
+ * ...
  * Messaging nodeX Info
  */
 
