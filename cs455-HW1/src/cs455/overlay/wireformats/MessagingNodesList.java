@@ -1,5 +1,97 @@
 package cs455.overlay.wireformats;
 
-public class MessagingNodesList {
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.util.ArrayList;
+
+/**
+ * Messaging nodes await instructions from the registry regarding the other messaging nodes that they must establish connections to
+ * This Protocol represents a message sent from the Registry to the Messaging Nodes regarding the neighbors of a given Messaging Node to connect to its neighboring Messaging Nodes
+ * Message Type (int): MESSAGING_NODES_LIST (6004)
+ * Number of peer messaging nodes (int): X
+ * Messaging node1 Info
+ * Messaging node2 Info
+ * …..
+ * Messaging nodeX Info
+ */
+
+public class MessagingNodesList implements Event {
+
+	private final int type = Protocol.DEREGISTER_REQUEST;
+	private int numberOfPeerMessagingNodes;
+	private ArrayList<String> messagingNodesInfoList;
+	
+	public MessagingNodesList(ArrayList<String> nodesList) {
+		this.numberOfPeerMessagingNodes = nodesList.size();
+		this.messagingNodesInfoList = nodesList;
+	}
+	
+	/**
+	 * byte[] construction is as follows:
+	 * type
+	 * numberOfPeerMessagingNodes
+	 * messagingNodesInfoList
+	 * @throws IOException 
+	 */
+	public MessagingNodesList(byte[] marshalledBytes) throws IOException {
+		ByteArrayInputStream baInputStream = new ByteArrayInputStream(marshalledBytes);
+		DataInputStream din = new DataInputStream(new BufferedInputStream(baInputStream));
+		
+		int type = din.readInt();
+		
+		if (type != Protocol.MESSAGING_NODES_LIST) {
+			System.out.println("Invalid Message Type for MessagingNodesList");
+			return;
+		}
+		
+		int numberOfPeerNodes = din.readInt();
+		this.numberOfPeerMessagingNodes = numberOfPeerNodes;
+		
+		this.messagingNodesInfoList = new ArrayList<>(this.numberOfPeerMessagingNodes);
+		
+		for (int i=0; i < this.numberOfPeerMessagingNodes; i++) {
+			int mNILength = din.readInt();
+			byte[] mNIBytes = new byte[mNILength];
+			din.readFully(mNIBytes);
+			this.messagingNodesInfoList.add(new String(mNIBytes));
+		}
+		
+		baInputStream.close();
+		din.close();
+	}
+
+	@Override
+	public int getType() {
+		return this.type;
+	}
+
+	@Override
+	public byte[] getBytes() throws IOException {
+		byte[] marshalledBytes = null;
+		ByteArrayOutputStream baOutputStream = new ByteArrayOutputStream();
+		DataOutputStream dout = new DataOutputStream(new BufferedOutputStream(baOutputStream));
+		dout.writeInt(this.type);
+		
+		dout.writeInt(numberOfPeerMessagingNodes);
+		
+		for (String s : this.messagingNodesInfoList) {
+			byte[] mNIBytes = s.getBytes();
+			int mNILength = mNIBytes.length;
+			dout.writeInt(mNILength);
+			dout.write(mNIBytes);
+		}
+
+		dout.flush();
+		marshalledBytes = baOutputStream.toByteArray();
+		baOutputStream.close();
+		dout.close();
+		
+		return marshalledBytes;
+	}
 
 }
