@@ -84,4 +84,12 @@ public class RegisterRequest implements Event {
 		return marshalledBytes;
 	}
 
+	public String getIPAddress() {
+		return IPAddress;
+	}
+
+	public int getPortNumber() {
+		return portNumber;
+	}
+
 }

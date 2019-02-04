@@ -83,4 +83,12 @@ public class RegisterResponse implements Event {
 		return marshalledBytes;
 	}
 
+	public byte getStatusCode() {
+		return statusCode;
+	}
+
+	public String getAdditionalInfo() {
+		return additionalInfo;
+	}
+
 }
