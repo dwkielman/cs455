@@ -14,6 +14,7 @@ import cs455.overlay.wireformats.Event;
 import cs455.overlay.wireformats.Protocol;
 import cs455.overlay.wireformats.RegisterRequest;
 import cs455.overlay.wireformats.RegisterResponse;
+import cs455.overlay.wireformats.TaskInitiate;
 
 /**
  * The registry maintains information about the registered messaging nodes in a registry; you can use any
@@ -26,7 +27,7 @@ import cs455.overlay.wireformats.RegisterResponse;
 public class Registry implements Node {
 	
 	private int portNumber;
-	private ArrayList<NodeInformation> nodesList;
+	private static ArrayList<NodeInformation> nodesList;
 	
 	public Registry(int portNumber) {
 		this.portNumber = portNumber;
@@ -100,6 +101,7 @@ public class Registry implements Node {
 	@Override
 	public void onEvent(Event event) {
 		int eventType = event.getType();
+		System.out.println("Event " + eventType + "Passed to Registry.");
 		switch(eventType) {
 			// REGISTER_REQUEST = 6000
 			case Protocol.REGISTER_REQUEST:
@@ -145,7 +147,8 @@ public class Registry implements Node {
 		this.portNumber = portNumber;
 	}
 	
-	private void handleRegisterRequest(Event event) {
+	private synchronized void handleRegisterRequest(Event event) {
+		System.out.println("begin handleRegisterRequest");
 		RegisterRequest registerRequest = (RegisterRequest) event;
 		String IP = registerRequest.getIPAddress();
 		int port = registerRequest.getPortNumber();
@@ -161,6 +164,7 @@ public class Registry implements Node {
 		} else {
 			this.sendRegistrationResponse(registerRequest, (byte) 0, "Node already registered. No action taken");
 		}
+		System.out.println("end handleRegisterRequest");
 	}
 	
 	/**
@@ -171,9 +175,12 @@ public class Registry implements Node {
 	 * Additional Info (String):
 	 */
 	private void sendRegistrationResponse(RegisterRequest registerRequest, byte status, String message) {
+		System.out.println("begin sendRegistrationResponse");
 		try {
 			Socket socket = new Socket(registerRequest.getIPAddress(), registerRequest.getPortNumber());
 			TCPSender sender = new TCPSender(socket);
+			
+			System.out.println("Sending to " + registerRequest.getIPAddress() + " on Port " + registerRequest.getPortNumber());
 			
 			RegisterResponse registerResponse = new RegisterResponse(status, message);
 			sender.sendData(registerResponse.getBytes());
@@ -181,6 +188,7 @@ public class Registry implements Node {
 		} catch (IOException ioe) {
 			ioe.printStackTrace();
 		}
+		System.out.println("end sendRegistrationResponse");
 	}
 	
 	private void handleDeregisterRequest(Event event) {

@@ -69,5 +69,9 @@ public class TaskInitiate implements Event {
 		
 		return marshalledBytes;
 	}
+	
+	public int getNumberOfRounds() {
+		return numberOfRounds;
+	}
 
 }

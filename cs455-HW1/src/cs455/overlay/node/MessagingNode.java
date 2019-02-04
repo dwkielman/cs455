@@ -47,6 +47,8 @@ public class MessagingNode implements Node {
 	// track the messages that it has received. sums values of the payloads that are received
 	private long receiveSummation;
 	
+	private TCPReceiverThread registryReceiverThread;
+	
 	private MessagingNode(String registryHostIPAddress, int registryHostPortNumber) {
 		this.registryHostName = registryHostIPAddress;
 		this.registryHostPortNumber = registryHostPortNumber;
@@ -81,6 +83,7 @@ public class MessagingNode implements Node {
 	@Override
 	public void onEvent(Event event) {
 		int eventType = event.getType();
+		System.out.println("Event " + eventType + "Passed to MessagingNode.");
 		switch(eventType) {
 			// REGISTER_RESPONSE = 6001
 			case Protocol.REGISTER_RESPONSE:
@@ -184,21 +187,32 @@ public class MessagingNode implements Node {
 	 * Port number (int)
 	 */
 	private synchronized void connectToRegistry() {
+		System.out.println("begin MessagingNode connectToRegistry");
 		try {
 			System.out.println(String.format("Attempting to connect to registry at: %s:%d", this.registryHostName, this.registryHostPortNumber));
 			Socket registrySocket = new Socket(this.registryHostName, this.registryHostPortNumber);
+			
+			/**
+			registryReceiverThread = new TCPReceiverThread(registrySocket, this);
+			registryReceiverThread.run();
+			**/
+			
+			System.out.println("Sending to " + this.registryHostName + " on Port " + this.registryHostPortNumber);
+			
 			TCPSender registrySender = new TCPSender(registrySocket);
 			
-			RegisterRequest registryRequest = new RegisterRequest(this.registryHostName, this.registryHostPortNumber);
+			RegisterRequest registryRequest = new RegisterRequest(this.localHostIPAddress, this.localHostPortNumber);
 			registrySender.sendData(registryRequest.getBytes());
 			
 		} catch (IOException ioe) {
 			ioe.printStackTrace();
 			System.exit(1);
 		}
+		System.out.println("end MessagingNode connectToRegistry");
 	}
 
 	private void handleRegisterResponse(Event event) {
+		System.out.println("begin MessagingNode handleRegisterResponse");
 		RegisterResponse registerResponse = (RegisterResponse) event;
 		// successful registration
 		if (registerResponse.getStatusCode() == (byte) 1) {
@@ -210,6 +224,7 @@ public class MessagingNode implements Node {
             System.out.println(String.format("Message: %s", registerResponse.getAdditionalInfo()));
             System.exit(0);
 		}
+		System.out.println("end MessagingNode handleRegisterResponse");
 	}
 
 	private void handleDeregisterResponse(Event event) {
@@ -225,7 +240,6 @@ public class MessagingNode implements Node {
 	}
 
 	private void handleTaskInitiate(Event event) {
-		
 	}
 
 	private void handleTaskSummaryRequest(Event event) {

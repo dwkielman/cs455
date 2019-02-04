@@ -48,7 +48,7 @@ public class TCPServerThread extends Thread {
 			System.out.println("Node is now listening on IP: " + this.hostIPAddress + " Port: " + this.portNumber);
 		}
 		
-		while (true) {
+		while (!isInterrupted()) {
 			try {
 				//Block on accepting connections. Once it has received a connection it will return a socket for us to use.
 				Socket incomingConnectionSocket = ourServerSocket.accept();
@@ -59,7 +59,6 @@ public class TCPServerThread extends Thread {
 				System.out.println("TCPServerThread::accepting_connections:: " + e);
 	            System.exit(1);
 			}
-			
 		}
 	}
 

@@ -33,6 +33,7 @@ public class RegisterRequest implements Event {
 	 * @throws IOException 
 	 */
 	public RegisterRequest(byte[] marshalledBytes) throws IOException {
+		System.out.println("Begin RegisterRequest Sending of Event");
 		ByteArrayInputStream baInputStream = new ByteArrayInputStream(marshalledBytes);
 		DataInputStream din = new DataInputStream(new BufferedInputStream(baInputStream));
 		
@@ -55,6 +56,7 @@ public class RegisterRequest implements Event {
 		
 		baInputStream.close();
 		din.close();
+		System.out.println("End RegisterRequest Sending of Event");
 	}
 
 	@Override
@@ -64,6 +66,7 @@ public class RegisterRequest implements Event {
 
 	@Override
 	public byte[] getBytes() throws IOException {
+		System.out.println("Begin RegisterRequest getBytes");
 		byte[] marshalledBytes = null;
 		ByteArrayOutputStream baOutputStream = new ByteArrayOutputStream();
 		DataOutputStream dout = new DataOutputStream(new BufferedOutputStream(baOutputStream));
@@ -80,7 +83,7 @@ public class RegisterRequest implements Event {
 		marshalledBytes = baOutputStream.toByteArray();
 		baOutputStream.close();
 		dout.close();
-		
+		System.out.println("End RegisterRequest getBytes");
 		return marshalledBytes;
 	}
 

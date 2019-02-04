@@ -37,8 +37,6 @@ public class TCPReceiverThread implements Runnable {
 				if (DEBUG) System.out.println("TCPReceiverThread awaiting byte array message delivery...");
 				byte[] data = new byte[dataLength];
 				din.readFully(data, 0, dataLength);
-				String str = new String(data, "UTF-8");
-				if (DEBUG) System.out.println("TCPReceiverThread received byte[]: " + str);
 				
 				// Notify node of event
 				eventFactory.createEvent(data, this.node);
