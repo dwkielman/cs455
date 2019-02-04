@@ -5,6 +5,7 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Scanner;
 
 import cs455.overlay.transport.TCPReceiverThread;
 import cs455.overlay.transport.TCPSender;
@@ -71,8 +72,30 @@ public class Registry implements Node {
 	}
 	
 	private static void handleUserInput(Node registrynode) {
+		Scanner scan = new Scanner(System.in);
+		System.out.println("Registry main()");
 		
-	}
+		System.out.println("Registry accepting commands ...");
+        while(true) {
+            System.out.println("Enter command: ");
+            String response = scan.nextLine();
+            System.out.println("You typed: " + response);
+            
+            if (response.equals("list-messaging-nodes")) {
+            	System.out.println("Listing links of messaging nodes:");
+            } else if (response.equals("list-weights")) {
+            	System.out.println("Starting List-Weights:");
+            } else if (response.equals("setup-overlay")) {
+            	System.out.println("Starting setup-overlay:");
+            } else if (response.equals("send-overlay-link-weights")) {
+            	System.out.println("Sending link-weights to messaging nodes");
+            } else if (response.equals("start")) {
+            	System.out.println("Starting rounds");
+            } else {
+            	System.out.println("Command unrecognized");
+            }
+        }
+    }
 
 	@Override
 	public void onEvent(Event event) {

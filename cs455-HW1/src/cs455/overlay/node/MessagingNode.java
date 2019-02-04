@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.Scanner;
 
 /**
  * A messaging node provides two closely related functions: it initiates and accepts both communications and messages within the system.
@@ -157,7 +158,23 @@ public class MessagingNode implements Node {
 	}
 	
 	private static void handleUserInput(Node messagingNode) {
+		Scanner scan = new Scanner(System.in);
+		System.out.println("MessagingNode main()");
 		
+		System.out.println("MessagingNode accepting commands ...");
+        while(true) {
+            System.out.println("Enter command: ");
+            String response = scan.nextLine();
+            System.out.println("You typed: " + response);
+            
+            if (response.equals("print-shortest-path")) {
+            	System.out.println("Starting print-shortest-path:");
+            } else if (response.equals("exit-overlay")) {
+            	System.out.println("Starting exit-overlay:");
+            } else {
+            	System.out.println("Command unrecognized");
+            }
+        }
 	}
 	
 	/**
