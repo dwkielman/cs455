@@ -6,16 +6,9 @@ import cs455.overlay.transport.TCPServerThread;
 import cs455.overlay.wireformats.DeregisterRequest;
 import cs455.overlay.wireformats.DeregisterResponse;
 import cs455.overlay.wireformats.Event;
-import cs455.overlay.wireformats.LinkWeights;
-import cs455.overlay.wireformats.Message;
-import cs455.overlay.wireformats.MessagingNodesList;
 import cs455.overlay.wireformats.Protocol;
 import cs455.overlay.wireformats.RegisterRequest;
 import cs455.overlay.wireformats.RegisterResponse;
-import cs455.overlay.wireformats.TaskComplete;
-import cs455.overlay.wireformats.TaskInitiate;
-import cs455.overlay.wireformats.TaskSummaryRequest;
-import cs455.overlay.wireformats.TaskSummaryResponse;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -192,11 +185,6 @@ public class MessagingNode implements Node {
 			System.out.println(String.format("Attempting to connect to registry at: %s:%d", this.registryHostName, this.registryHostPortNumber));
 			Socket registrySocket = new Socket(this.registryHostName, this.registryHostPortNumber);
 			
-			/**
-			registryReceiverThread = new TCPReceiverThread(registrySocket, this);
-			registryReceiverThread.run();
-			**/
-			
 			System.out.println("Sending to " + this.registryHostName + " on Port " + this.registryHostPortNumber);
 			
 			TCPSender registrySender = new TCPSender(registrySocket);
@@ -226,9 +214,41 @@ public class MessagingNode implements Node {
 		}
 		System.out.println("end MessagingNode handleRegisterResponse");
 	}
+	
+	private void disconnectFromRegistry() {
+		System.out.println("begin MessagingNode disconnectFromRegistry");
+		try {
+			System.out.println(String.format("Attempting to disconnect to registry at: %s:%d", this.registryHostName, this.registryHostPortNumber));
+			Socket registrySocket = new Socket(this.registryHostName, this.registryHostPortNumber);
+			
+			System.out.println("Sending Dergister Request to " + this.registryHostName + " on Port " + this.registryHostPortNumber);
+			
+			TCPSender registrySender = new TCPSender(registrySocket);
+			
+			DeregisterRequest deregistryRequest = new DeregisterRequest(this.localHostIPAddress, this.localHostPortNumber);
+			registrySender.sendData(deregistryRequest.getBytes());
+			
+		} catch (IOException ioe) {
+			ioe.printStackTrace();
+			System.exit(1);
+		}
+		System.out.println("end MessagingNode disconnectFromRegistry");
+	}
 
 	private void handleDeregisterResponse(Event event) {
-		
+		System.out.println("begin MessagingNode handleDeregisterResponse");
+		DeregisterResponse deregisterResponse = (DeregisterResponse) event;
+		// successful deregistration
+		if (deregisterResponse.getStatusCode() == (byte) 1) {
+			System.out.println("Deregistration Request Succeeded.");
+			System.out.println(String.format("Message: %s", deregisterResponse.getAdditionalInfo()));
+		// unsuccessful registration
+		} else {
+			System.out.println("Deregistration Request Failed. Exiting.");
+            System.out.println(String.format("Message: %s", deregisterResponse.getAdditionalInfo()));
+            System.exit(0);
+		}
+		System.out.println("end MessagingNode handleDeregisterResponse");
 	}
 
 	private void handleMessagingNodesList(Event event) {

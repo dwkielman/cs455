@@ -6,7 +6,6 @@ import java.net.Socket;
 import java.net.SocketException;
 
 import cs455.overlay.node.Node;
-import cs455.overlay.wireformats.Event;
 import cs455.overlay.wireformats.EventFactory;
 
 public class TCPReceiverThread implements Runnable {

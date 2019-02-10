@@ -7,14 +7,15 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Scanner;
 
-import cs455.overlay.transport.TCPReceiverThread;
 import cs455.overlay.transport.TCPSender;
 import cs455.overlay.transport.TCPServerThread;
+import cs455.overlay.util.OverlayCreator;
+import cs455.overlay.wireformats.DeregisterRequest;
+import cs455.overlay.wireformats.DeregisterResponse;
 import cs455.overlay.wireformats.Event;
 import cs455.overlay.wireformats.Protocol;
 import cs455.overlay.wireformats.RegisterRequest;
 import cs455.overlay.wireformats.RegisterResponse;
-import cs455.overlay.wireformats.TaskInitiate;
 
 /**
  * The registry maintains information about the registered messaging nodes in a registry; you can use any
@@ -26,8 +27,9 @@ import cs455.overlay.wireformats.TaskInitiate;
 
 public class Registry implements Node {
 	
+	private static final boolean DEBUG = true;
 	private int portNumber;
-	private static ArrayList<NodeInformation> nodesList;
+	private ArrayList<NodeInformation> nodesList;
 	
 	public Registry(int portNumber) {
 		this.portNumber = portNumber;
@@ -72,11 +74,11 @@ public class Registry implements Node {
         handleUserInput(registry);
 	}
 	
-	private static void handleUserInput(Node registrynode) {
+	private static void handleUserInput(Registry registrynode) {
 		Scanner scan = new Scanner(System.in);
 		System.out.println("Registry main()");
 		
-		System.out.println("Registry accepting commands ...");
+		System.out.println("Registry accepting commands...");
         while(true) {
             System.out.println("Enter command: ");
             String response = scan.nextLine();
@@ -84,10 +86,25 @@ public class Registry implements Node {
             
             if (response.equals("list-messaging-nodes")) {
             	System.out.println("Listing links of messaging nodes:");
+            	registrynode.listMessagingNodes();
             } else if (response.equals("list-weights")) {
             	System.out.println("Starting List-Weights:");
-            } else if (response.equals("setup-overlay")) {
-            	System.out.println("Starting setup-overlay:");
+            // e.g. setup-overlay 4 (4 is the default connections this project will apply)
+            } else if (response.startsWith("setup-overlay")) {
+            	try {
+            		int numConnections = Integer.parseInt(response.replaceAll("[^\\d.]", ""));
+            		if (registrynode.nodesList.size() < 1) {
+                		System.out.println("Unable to perform setup-overlay, not enough nodes have connected to the Registry yet.");
+                	} else if (numConnections < 1) {
+                		System.out.println("Unable to perform setup-overlay, number of connectsion must be greater than 1.");
+                	} else {
+                		System.out.println("Starting setup-overlay with: " + numConnections + " Number of Connections.");
+                    	registrynode.setupOverlay(numConnections);
+                	}
+            	} catch (NumberFormatException nfe) {
+            		System.out.println("Invalid argument. Argument must be a number.");
+        			nfe.printStackTrace();
+            	}
             } else if (response.equals("send-overlay-link-weights")) {
             	System.out.println("Sending link-weights to messaging nodes");
             } else if (response.equals("start")) {
@@ -139,7 +156,6 @@ public class Registry implements Node {
 				System.out.println("Invalid Event to Node.");
 				return;
 			}
-		
 	}
 
 	@Override
@@ -160,6 +176,7 @@ public class Registry implements Node {
 		// success, node is not currently registered so adding to the list of nodes
 		if (!this.nodesList.contains(ni)) {
 			this.nodesList.add(ni);
+			System.out.println("Registration request successful. The number of messaging nodes currently constituting the overlay is (" + this.nodesList.size() + ")");
 			this.sendRegistrationResponse(registerRequest, (byte) 1, "Node Registered");
 		} else {
 			this.sendRegistrationResponse(registerRequest, (byte) 0, "Node already registered. No action taken");
@@ -192,7 +209,46 @@ public class Registry implements Node {
 	}
 	
 	private void handleDeregisterRequest(Event event) {
+		System.out.println("begin handleDeregisterRequest");
+		DeregisterRequest deregisterRequest = (DeregisterRequest) event;
+		String IP = deregisterRequest.getIPAddress();
+		int port = deregisterRequest.getPortNumber();
 		
+		System.out.println("Got register request from IP: " + IP + " Port: " + String.valueOf(port) + ".");
+		
+		NodeInformation ni = new NodeInformation(IP, port);
+		
+		// success, node is not currently registered so adding to the list of nodes
+		if (this.nodesList.contains(ni)) {
+			this.nodesList.remove(ni);
+			this.sendDeregistrationResponse(deregisterRequest, (byte) 1, "Node Deregistered");
+		} else {
+			this.sendDeregistrationResponse(deregisterRequest, (byte) 0, "Node not in Registry. No action taken");
+		}
+		System.out.println("end handleDeregisterRequest");
+	}
+	
+	/**
+	 * The Registry Node needs to respond when a messaging node exits and is trying to deregister itself
+	 * Message Type (int): DEREGISTER_REQUEST (6003)
+	 * Status Code (byte): SUCCESS or FAILURE
+	 * Additional Info (String):
+	 */
+	private void sendDeregistrationResponse(DeregisterRequest deregisterRequest, byte status, String message) {
+		System.out.println("begin sendDeregistrationResponse");
+		try {
+			Socket socket = new Socket(deregisterRequest.getIPAddress(), deregisterRequest.getPortNumber());
+			TCPSender sender = new TCPSender(socket);
+			
+			System.out.println("Sending to " + deregisterRequest.getIPAddress() + " on Port " + deregisterRequest.getPortNumber());
+			
+			DeregisterResponse deregisterResponse = new DeregisterResponse(status, message);
+			sender.sendData(deregisterResponse.getBytes());
+			socket.close();
+		} catch (IOException ioe) {
+			ioe.printStackTrace();
+		}
+		System.out.println("end sendDeregistrationResponse");
 	}
 
 	private void handleMessagingNodesList(Event event) {
@@ -219,6 +275,19 @@ public class Registry implements Node {
 		
 	}
 	
+	/**
+	 * This should result in information about the messaging nodes (hostname, and port-number) being listed. Information for each messaging node should be listed on a separate line.
+	 */
+	private void listMessagingNodes() {
+		for (NodeInformation ni : nodesList) {
+			System.out.println("hostname: " + ni.getNodeIPAddress() + "/tport number: " + ni.getNodePortNumber());
+		}
+	}
+	
+	private void setupOverlay(int numberOfConnections) {
+		OverlayCreator overlay = new OverlayCreator(this.nodesList);
+		overlay.createOverlay(numberOfConnections);
+	}
 	// Allows messaging nodes to register themselves. This is performed when a messaging node starts up for the first time.
 
 	// Allows messaging nodes to deregister themselves. This is performed when a messaging node leaves the overlay.

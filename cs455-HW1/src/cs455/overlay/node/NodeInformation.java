@@ -10,10 +10,12 @@ public class NodeInformation {
 
 	private String nodeIPAddress;
 	private int nodePortNumber;
+	private int numberOfConnections;
 	
 	public NodeInformation(String nodeIPAddress, int nodePortNumber) {
 		this.nodeIPAddress = nodeIPAddress;
 		this.nodePortNumber = nodePortNumber;
+		this.numberOfConnections = 0;
 	}
 	
 	@Override
@@ -33,6 +35,14 @@ public class NodeInformation {
 	
 	public int getNodePortNumber() {
 		return this.nodePortNumber;
+	}
+	
+	public void addConnection() {
+		this.numberOfConnections++;
+	}
+	
+	public int getNumberOfConnections() {
+		return this.numberOfConnections;
 	}
 	
 	@Override
