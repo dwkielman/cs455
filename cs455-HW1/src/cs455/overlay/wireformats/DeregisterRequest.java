@@ -21,6 +21,11 @@ public class DeregisterRequest implements Event {
 	private String IPAddress;
 	private int portNumber;
 	
+	public DeregisterRequest(String IPAddress, int portNumber) {
+		this.IPAddress = IPAddress;
+		this.portNumber = portNumber;
+	}
+	
 	/**
 	 * byte[] construction is as follows:
 	 * type
@@ -78,6 +83,14 @@ public class DeregisterRequest implements Event {
 		dout.close();
 		
 		return marshalledBytes;
+	}
+
+	public String getIPAddress() {
+		return IPAddress;
+	}
+
+	public int getPortNumber() {
+		return portNumber;
 	}
 
 }

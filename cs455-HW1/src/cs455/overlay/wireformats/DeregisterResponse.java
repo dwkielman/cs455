@@ -21,6 +21,11 @@ public class DeregisterResponse implements Event {
 	private byte statusCode;
 	private String additionalInfo;
 	
+	public DeregisterResponse(byte statusCode, String additionalInfo) {
+		this.statusCode = statusCode;
+		this.additionalInfo = additionalInfo;
+	}
+	
 	/**
 	 * byte[] construction is as follows:
 	 * type
@@ -76,6 +81,14 @@ public class DeregisterResponse implements Event {
 		dout.close();
 		
 		return marshalledBytes;
+	}
+
+	public byte getStatusCode() {
+		return statusCode;
+	}
+
+	public String getAdditionalInfo() {
+		return additionalInfo;
 	}
 
 }
