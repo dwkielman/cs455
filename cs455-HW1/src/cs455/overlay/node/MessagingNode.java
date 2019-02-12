@@ -6,6 +6,10 @@ import cs455.overlay.transport.TCPServerThread;
 import cs455.overlay.wireformats.DeregisterRequest;
 import cs455.overlay.wireformats.DeregisterResponse;
 import cs455.overlay.wireformats.Event;
+import cs455.overlay.wireformats.Message;
+import cs455.overlay.wireformats.MessagingNodesList;
+import cs455.overlay.wireformats.NodeConnectionRequest;
+import cs455.overlay.wireformats.NodeConnectionResponse;
 import cs455.overlay.wireformats.Protocol;
 import cs455.overlay.wireformats.RegisterRequest;
 import cs455.overlay.wireformats.RegisterResponse;
@@ -14,6 +18,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.Scanner;
 
 /**
@@ -41,6 +46,7 @@ public class MessagingNode implements Node {
 	private long receiveSummation;
 	
 	private TCPReceiverThread registryReceiverThread;
+	private ArrayList<NodeInformation> neighborNodes;
 	
 	private MessagingNode(String registryHostIPAddress, int registryHostPortNumber) {
 		this.registryHostName = registryHostIPAddress;
@@ -50,6 +56,7 @@ public class MessagingNode implements Node {
 		this.relayTracker = 0;
 		this.sendSummation = 0;
 		this.receiveSummation = 0;
+		this.neighborNodes = new ArrayList<>();
 		
 		try {
 			TCPServerThread serverThread = new TCPServerThread(0, this);
@@ -109,6 +116,14 @@ public class MessagingNode implements Node {
 			// MESSAGE = 6010
 			case Protocol.MESSAGE:
 				handleMessage(event);
+				break;
+			// NODE_CONNECTION_REQUEST = 6011
+			case Protocol.NODE_CONNECTION_REQUEST:
+				handleNodeConnectionRequest(event);
+				break;
+			// NODE_CONNECTION_RESPONSE = 6012
+			case Protocol.NODE_CONNECTION_RESPONSE:
+				handleNodeConnectionResponse(event);
 				break;
 			default:
 				System.out.println("Invalid Event to Node.");
@@ -252,7 +267,94 @@ public class MessagingNode implements Node {
 	}
 
 	private void handleMessagingNodesList(Event event) {
+		System.out.println("begin MessagingNode handleMessagingNodesList");
+		MessagingNodesList messagingNodesList = (MessagingNodesList) event;
+		ArrayList<NodeInformation> nodesToConnectTo = new ArrayList<>(messagingNodesList.getMessagingNodesInfoList());
 		
+		for (NodeInformation ni : nodesToConnectTo) {
+			connectToMessagingNode(ni);
+		}
+		
+		if (this.neighborNodes.size() == messagingNodesList.getNumberOfPeerMessagingNodes()) {
+			System.out.println("All connections are established. Number of connections: " + this.neighborNodes.size());
+		} else {
+			System.out.println("Number of Connections is currently: " + this.neighborNodes.size());
+		}
+		System.out.println("end MessagingNode handleMessagingNodesList");
+	}
+	
+	private void connectToMessagingNode(NodeInformation nodeToConnectTo) {
+
+		try {
+			System.out.println(String.format("Attempting to connect to messagingNode at: %s:%d", nodeToConnectTo.getNodeIPAddress(), nodeToConnectTo.getNodePortNumber()));
+			Socket nodeSocket = new Socket(nodeToConnectTo.getNodeIPAddress(), nodeToConnectTo.getNodePortNumber());
+			
+			System.out.println("Sending to " + nodeToConnectTo.getNodeIPAddress() + " on Port " + nodeToConnectTo.getNodePortNumber());
+			
+			TCPSender nodeSender = new TCPSender(nodeSocket);
+			
+			NodeConnectionRequest nodeConnectionRequest = new NodeConnectionRequest(new NodeInformation(this.localHostIPAddress, this.localHostPortNumber));
+			nodeSender.sendData(nodeConnectionRequest.getBytes());
+			
+		} catch (IOException ioe) {
+			ioe.printStackTrace();
+			System.exit(1);
+		}
+	}
+	
+	private void handleNodeConnectionRequest(Event event) {
+		System.out.println("begin handleNodeConnectionRequest");
+		NodeConnectionRequest nodeConnectionRequest = (NodeConnectionRequest) event;
+		
+		NodeInformation requesterNode = nodeConnectionRequest.getNodeRequester();
+		
+		System.out.println("Got messagingNode request from IP: " + requesterNode.getNodeIPAddress() + " Port: " + String.valueOf(requesterNode.getNodePortNumber()) + ".");
+		
+		// success, node is not currently connected to as one of our neighbors
+		if (!this.neighborNodes.contains(requesterNode)) {
+			this.neighborNodes.add(requesterNode);
+			System.out.println("MessagingNode request successful. The number of messaging nodes this node has as a neighbor is (" + this.neighborNodes.size() + ")");
+			this.sendNodeConnectionResponse(nodeConnectionRequest, (byte) 1);
+		} else {
+			this.sendNodeConnectionResponse(nodeConnectionRequest, (byte) 0);
+		}
+		System.out.println("end handleNodeConnectionRequest");
+	}
+	
+	private void sendNodeConnectionResponse(NodeConnectionRequest nodeConnectionRequest, byte status) {
+		System.out.println("begin sendNodeConnectionResponse");
+		try {
+			Socket socket = new Socket(nodeConnectionRequest.getNodeRequester().getNodeIPAddress(), nodeConnectionRequest.getNodeRequester().getNodePortNumber());
+			TCPSender sender = new TCPSender(socket);
+			
+			System.out.println("Sending to " + nodeConnectionRequest.getNodeRequester().getNodeIPAddress() + " on Port " + nodeConnectionRequest.getNodeRequester().getNodePortNumber());
+			
+			NodeConnectionResponse nodeConnectionResponse = new NodeConnectionResponse(status, new NodeInformation(this.localHostIPAddress, this.localHostPortNumber));
+			sender.sendData(nodeConnectionResponse.getBytes());
+			socket.close();
+		} catch (IOException ioe) {
+			ioe.printStackTrace();
+		}
+		System.out.println("end sendNodeConnectionResponse");
+	}
+	
+	private void handleNodeConnectionResponse(Event event) {
+		System.out.println("begin handleNodeConnectionResponse");
+		NodeConnectionResponse nodeConnectionResponse = (NodeConnectionResponse) event;
+		
+		NodeInformation responderNode = nodeConnectionResponse.getNodeResponder();
+		
+		System.out.println("Got messagingNode request from IP: " + responderNode.getNodeIPAddress() + " Port: " + String.valueOf(responderNode.getNodePortNumber()) + ".");
+		
+		// successful connection
+		if (nodeConnectionResponse.getStatusCode() == (byte) 1) {
+			System.out.println("Connection Request Succeeded.");
+			this.neighborNodes.add(responderNode);
+		// unsuccessful connection
+		} else {
+			System.out.println("Connection Request Failed.");
+		}
+		System.out.println("end handleNodeConnectionResponse");
 	}
 
 	private void handleLinkWeights(Event event) {
@@ -273,6 +375,8 @@ public class MessagingNode implements Node {
 	private void handleMessage(Event event) {
 		
 	}
+	
+	
 	
 	/**
      * Create this as synchronized so that two threads can't update the counter simultaneously.

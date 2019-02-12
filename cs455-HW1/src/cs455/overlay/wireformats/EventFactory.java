@@ -81,6 +81,14 @@ public class EventFactory {
 				case Protocol.MESSAGE:
 					event = new Message(marshalledBytes);
 					break;
+				// NODE_CONNECTION_REQUEST = 6011
+				case Protocol.NODE_CONNECTION_REQUEST:
+					event = new Message(marshalledBytes);
+					break;
+				// NODE_CONNECTION_RESPONSE = 6012
+				case Protocol.NODE_CONNECTION_RESPONSE:
+					event = new Message(marshalledBytes);
+					break;
 				default:
 					System.out.println("Invalid Message Type");
 					return;

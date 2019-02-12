@@ -7,12 +7,14 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Scanner;
 
+import cs455.overlay.dijkstra.ShortestPath;
 import cs455.overlay.transport.TCPSender;
 import cs455.overlay.transport.TCPServerThread;
 import cs455.overlay.util.OverlayCreator;
 import cs455.overlay.wireformats.DeregisterRequest;
 import cs455.overlay.wireformats.DeregisterResponse;
 import cs455.overlay.wireformats.Event;
+import cs455.overlay.wireformats.MessagingNodesList;
 import cs455.overlay.wireformats.Protocol;
 import cs455.overlay.wireformats.RegisterRequest;
 import cs455.overlay.wireformats.RegisterResponse;
@@ -30,6 +32,7 @@ public class Registry implements Node {
 	private static final boolean DEBUG = true;
 	private int portNumber;
 	private ArrayList<NodeInformation> nodesList;
+	private OverlayCreator overlay;
 	
 	public Registry(int portNumber) {
 		this.portNumber = portNumber;
@@ -107,6 +110,7 @@ public class Registry implements Node {
             	}
             } else if (response.equals("send-overlay-link-weights")) {
             	System.out.println("Sending link-weights to messaging nodes");
+            	registrynode.sendOverlayLinkWeights();
             } else if (response.equals("start")) {
             	System.out.println("Starting rounds");
             } else {
@@ -285,8 +289,45 @@ public class Registry implements Node {
 	}
 	
 	private void setupOverlay(int numberOfConnections) {
-		OverlayCreator overlay = new OverlayCreator(this.nodesList);
-		overlay.createOverlay(numberOfConnections);
+		this.overlay = new OverlayCreator(this.nodesList);
+		this.overlay.createOverlay(numberOfConnections);
+		
+		sendMessagingNodesList();
+	}
+	
+	private void sendMessagingNodesList() {
+		System.out.println("begin sendMessagingNodesList");
+		if (this.nodesList.size() > 0) {
+			// send a message to all nodes that the overlay has been created and tell them their connections
+			for (NodeInformation node : nodesList) {
+				ShortestPath sp = new ShortestPath(this.overlay);
+				sp.execute(node);
+				ArrayList<NodeInformation> neighborNodes = new ArrayList<>(this.overlay.getNeighborNodes(node));
+				
+				try {		
+					Socket socket = new Socket(node.getNodeIPAddress(), node.getNodePortNumber());
+					TCPSender sender = new TCPSender(socket);
+					
+					if (DEBUG) {
+						System.out.println("Sending to " + node.getNodeIPAddress() + " on Port " + node.getNodePortNumber());
+					}
+					
+					MessagingNodesList messingNodesList = new MessagingNodesList(neighborNodes);
+					sender.sendData(messingNodesList.getBytes());
+					socket.close();
+				} catch (IOException ioe) {
+					ioe.printStackTrace();
+				}
+			}
+		} else {
+			System.out.println("No Nodes Registered to send MessagingNodesList to.");
+		}
+		System.out.println("end sendMessagingNodesList");
+	}
+	
+	// DANIEL START HERE, SEND THE LINK WEIGHTS TO ALL OF THE NODES
+	private void sendOverlayLinkWeights() {
+		
 	}
 	// Allows messaging nodes to register themselves. This is performed when a messaging node starts up for the first time.
 

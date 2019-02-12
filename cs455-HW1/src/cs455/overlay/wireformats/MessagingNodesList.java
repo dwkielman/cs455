@@ -9,12 +9,14 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 
+import cs455.overlay.node.NodeInformation;
+
 /**
  * Messaging nodes await instructions from the registry regarding the other messaging nodes that they must establish connections to
  * This Protocol represents a message sent from the Registry to the Messaging Nodes regarding the neighbors of a given Messaging Node to connect to its neighboring Messaging Nodes
  * Message Type (int): MESSAGING_NODES_LIST (6004)
  * Number of peer messaging nodes (int): X
- * Messaging node1 Info (ArrayList<String>)
+ * Messaging node1 Info (ArrayList<NodeInformation>)
  * Messaging node2 Info
  * ...
  * Messaging nodeX Info
@@ -22,11 +24,11 @@ import java.util.ArrayList;
 
 public class MessagingNodesList implements Event {
 
-	private final int type = Protocol.DEREGISTER_REQUEST;
+	private final int type = Protocol.MESSAGING_NODES_LIST;
 	private int numberOfPeerMessagingNodes;
-	private ArrayList<String> messagingNodesInfoList;
+	private ArrayList<NodeInformation> messagingNodesInfoList;
 	
-	public MessagingNodesList(ArrayList<String> nodesList) {
+	public MessagingNodesList(ArrayList<NodeInformation> nodesList) {
 		this.numberOfPeerMessagingNodes = nodesList.size();
 		this.messagingNodesInfoList = nodesList;
 	}
@@ -58,7 +60,7 @@ public class MessagingNodesList implements Event {
 			int mNILength = din.readInt();
 			byte[] mNIBytes = new byte[mNILength];
 			din.readFully(mNIBytes);
-			this.messagingNodesInfoList.add(new String(mNIBytes));
+			this.messagingNodesInfoList.add(new NodeInformation(mNIBytes));
 		}
 		
 		baInputStream.close();
@@ -79,8 +81,8 @@ public class MessagingNodesList implements Event {
 		
 		dout.writeInt(numberOfPeerMessagingNodes);
 		
-		for (String s : this.messagingNodesInfoList) {
-			byte[] mNIBytes = s.getBytes();
+		for (NodeInformation n : this.messagingNodesInfoList) {
+			byte[] mNIBytes = n.getBytes();
 			int mNILength = mNIBytes.length;
 			dout.writeInt(mNILength);
 			dout.write(mNIBytes);
@@ -92,6 +94,14 @@ public class MessagingNodesList implements Event {
 		dout.close();
 		
 		return marshalledBytes;
+	}
+
+	public int getNumberOfPeerMessagingNodes() {
+		return numberOfPeerMessagingNodes;
+	}
+
+	public ArrayList<NodeInformation> getMessagingNodesInfoList() {
+		return messagingNodesInfoList;
 	}
 
 }

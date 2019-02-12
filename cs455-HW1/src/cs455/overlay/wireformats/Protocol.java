@@ -16,4 +16,6 @@ public class Protocol {
 	public static final int PULL_TRAFFIC_SUMMARY = 6008;
 	public static final int TRAFFIC_SUMMARY = 6009;
 	public static final int MESSAGE = 6010;
+	public static final int NODE_CONNECTION_REQUEST = 6011;
+	public static final int NODE_CONNECTION_RESPONSE = 6012;
 }

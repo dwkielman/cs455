@@ -18,6 +18,7 @@ import cs455.overlay.util.OverlayCreator;
 
 public class ShortestPath {
 
+	private final static boolean DEBUG = true;
 	private OverlayCreator overlay;
 	private ArrayList<NodeInformation> nodesList;
 	private ArrayList<Edge> edgeList;
@@ -53,15 +54,14 @@ public class ShortestPath {
 	
 	private void findMinDistance(NodeInformation node) {
 		List<NodeInformation> neighborNodes = getNeighborNodes(node);
-		for (NodeInformation n : neighborNodes) {
-			if (getShortestPath(n) > (getShortestPath(node) + getDistance(node, n))) {
-				distance.put(n, getShortestPath(node) + getDistance(node, n));
-				predecessors.put(n, node);
-				unsettledNodes.add(n);
+		for (NodeInformation target : neighborNodes) {
+			if (getShortestPath(target) > getShortestPath(node) + getDistance(node, target)) {
+				distance.put(target, getShortestPath(node) + getDistance(node, target));
+				predecessors.put(target, node);
+				unsettledNodes.add(target);
 			}
 		}
 	}
-	
 	
 	private int getDistance(NodeInformation startNode, NodeInformation destNode) {
 		for (Edge e : this.edgeList) {
@@ -118,6 +118,59 @@ public class ShortestPath {
 		// bi-directional, but need to return the path TO the node
 		Collections.reverse(nodePath);
 		return nodePath;
+	}
+	
+	public static void main(String args[]) {
+		if (DEBUG) {
+			ArrayList<NodeInformation> nodeList = new ArrayList<>();
+			nodeList.add(new NodeInformation("127.0.0.1", 9000));
+	        nodeList.add(new NodeInformation("127.0.0.1", 9001));
+	        nodeList.add(new NodeInformation("127.0.0.1", 9002));
+	        nodeList.add(new NodeInformation("127.0.0.1", 9003));
+	        nodeList.add(new NodeInformation("127.0.0.1", 9004));
+	        nodeList.add(new NodeInformation("127.0.0.1", 9005));
+	        nodeList.add(new NodeInformation("127.0.0.1", 9006));
+	        nodeList.add(new NodeInformation("127.0.0.1", 9007));
+	        nodeList.add(new NodeInformation("127.0.0.1", 9008));
+	        nodeList.add(new NodeInformation("127.0.0.1", 9009));
+	        
+	        OverlayCreator myOC = new OverlayCreator(nodeList);
+	        myOC.createOverlay(4);
+	        
+	        System.out.println("Testing Begin");
+	        ArrayList<Edge> edgeListTesting = myOC.getEdgesList();
+	        
+	        
+	        for (Edge e : edgeListTesting) {
+	        	System.out.println("Source: " + e.getSourceNode());
+	        	System.out.println("Destination: " + e.getDestationNode());
+	        	System.out.println("Weight: " + e.getWeight());
+	        	System.out.println();
+	        	System.out.println("Source Num of C: " + e.getSourceNode().getNumberOfConnections());
+	        }
+	        
+	        
+	        ShortestPath sp = new ShortestPath(myOC);
+	        sp.printConnections();
+	        sp.execute(nodeList.get(0));
+	        System.out.println("Starting at: " + nodeList.get(0).getNodePortNumber());
+	        System.out.println("Going to: " + nodeList.get(5).getNodePortNumber());
+	        System.out.println(sp.getPath(nodeList.get(5)));
+	        //System.out.println(sp.getPath(nodeList.get(7)));
+	        
+	        ArrayList<NodeInformation> neighborNodes = myOC.getNeighborNodes(nodeList.get(0));
+	        
+	        for (NodeInformation ni : neighborNodes) {
+	        	System.out.println("Neighbor Node: " + ni.getNodePortNumber());
+	        }
+	        
+		}
+	}
+	
+	private void printConnections( ) {
+		for (NodeInformation n : this.nodesList) {
+			System.out.println(n + "-" + this.overlay.getConnectionCount(n));
+		}
 	}
 	
 }
