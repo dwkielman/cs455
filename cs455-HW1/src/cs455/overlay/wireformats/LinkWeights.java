@@ -9,12 +9,14 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 
+import cs455.overlay.dijkstra.Edge;
+
 /**
  * A single message should be constructed with all link weights and sent to all registered messaging nodes.
  * A messaging node should process this message and store its information to generate routing paths for messages.
  * Message Type (int): LINK_WEIGHTS (6005)
  * Number of links (int): L
- * Linkinfo1 (ArrayList<String>)
+ * Linkinfo1 (ArrayList<Edge>)
  * Linkinfo2
  * ...
  * LinkinfoL
@@ -25,18 +27,19 @@ public class LinkWeights implements Event {
 
 	private final int type = Protocol.LINK_WEIGHTS;
 	private int numberOfLinks;
-	private ArrayList<String> linkInfoList;
+	private ArrayList<Edge> linkWeightsEdges;
 	
-	public LinkWeights(ArrayList<String> linksList) {
-		this.numberOfLinks = linksList.size();
-		this.linkInfoList = linksList;
+	public LinkWeights(ArrayList<Edge> edgesList) {
+		this.numberOfLinks = edgesList.size();
+		this.linkWeightsEdges = edgesList;
+		
 	}
 	
 	/**
 	 * byte[] construction is as follows:
 	 * type
 	 * numberOfLinks
-	 * linkInfoList
+	 * linkWeightsEdges
 	 * @throws IOException 
 	 */
 	public LinkWeights(byte[] marshalledBytes) throws IOException {
@@ -53,13 +56,13 @@ public class LinkWeights implements Event {
 		int numberOfLinks = din.readInt();
 		this.numberOfLinks = numberOfLinks;
 		
-		this.linkInfoList = new ArrayList<>(this.numberOfLinks);
+		this.linkWeightsEdges = new ArrayList<>(this.linkWeightsEdges);
 		
 		for (int i=0; i < this.numberOfLinks; i++) {
-			int linkLength = din.readInt();
-			byte[] linkBytes = new byte[linkLength];
-			din.readFully(linkBytes);
-			this.linkInfoList.add(new String(linkBytes));
+			int edgeLength = din.readInt();
+			byte[] edgeBytes = new byte[edgeLength];
+			din.readFully(edgeBytes);
+			this.linkWeightsEdges.add(new Edge(edgeBytes));
 		}
 		
 		baInputStream.close();
@@ -78,13 +81,13 @@ public class LinkWeights implements Event {
 		DataOutputStream dout = new DataOutputStream(new BufferedOutputStream(baOutputStream));
 		dout.writeInt(this.type);
 		
-		dout.writeInt(numberOfLinks);
+		dout.writeInt(this.numberOfLinks);
 		
-		for (String s : this.linkInfoList) {
-			byte[] linkBytes = s.getBytes();
-			int linkLength = linkBytes.length;
-			dout.writeInt(linkLength);
-			dout.write(linkBytes);
+		for (Edge e : this.linkWeightsEdges) {
+			byte[] edgeBytes = e.getBytes();
+			int edgeLength = edgeBytes.length;
+			dout.writeInt(edgeLength);
+			dout.write(edgeBytes);
 		}
 
 		dout.flush();
