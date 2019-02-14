@@ -21,7 +21,7 @@ public class OverlayCreator {
 		this.nodesList = nodesList;
 		this.edgesList = new ArrayList<>();
 	}
-
+	
 	public void createOverlay(int numberOfConnections) {
 		Random random = new Random();
 		
@@ -67,7 +67,13 @@ public class OverlayCreator {
 					}
 				}
 			}
-			//}
+		}
+	}
+	
+	// messagingNodes can reconstruct the overlay using only a list of Edges
+	public void createOverlayFromEdges(ArrayList<Edge> edgesList) {
+		for (Edge e : edgesList) {
+			this.edgesList.add(new Edge(e.getSourceNode(), e.getDestationNode(), e.getWeight()));
 		}
 	}
 	
@@ -102,5 +108,4 @@ public class OverlayCreator {
 		
 		return neighborNodes;
 	}
-	
 }
