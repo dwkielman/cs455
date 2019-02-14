@@ -39,7 +39,7 @@ public class DeregisterResponse implements Event {
 		
 		int type = din.readInt();
 		
-		if (type != Protocol.REGISTER_RESPONSE) {
+		if (type != Protocol.DEREGISTER_RESPONSE) {
 			System.out.println("Invalid Message Type for RegisterResponse");
 			return;
 		}

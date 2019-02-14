@@ -39,7 +39,7 @@ public class DeregisterRequest implements Event {
 		
 		int type = din.readInt();
 		
-		if (type != Protocol.REGISTER_REQUEST) {
+		if (type != Protocol.DEREGISTER_REQUEST) {
 			System.out.println("Invalid Message Type for DeregisterRequest");
 			return;
 		}
