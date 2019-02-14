@@ -7,26 +7,32 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
+
+import cs455.overlay.dijkstra.RoutingCache;
+import cs455.overlay.node.NodeInformation;
 
 /**
  * Data can be fed into the network from any messaging node within the network. Packets are sent from a source to a sink.
  * A message includes a payload which is a random integer.
  * Message Type (int): MESSAGE (6010)
- * Source IP address (String)
- * Source Port number (int)
- * Destination IP address (String)
- * Destination Port number (int)
+ * Source IP address and Port (NodeInformation)
+ * Destination IP address and Port (NodeInformation)
  * Payload (int)
+ * Route Path (ArrayList<NodeInformation>)
  */
 
 public class Message implements Event {
 
 	private final int type = Protocol.MESSAGE;
+	private NodeInformation sourceNode;
+	private NodeInformation destinationNode;
 	private String sourceIPAddress;
 	private int sourcePortNumber;
 	private String destiantionIPAddress;
 	private int destiantionPortNumber;
 	private int payload;
+	private ArrayList<NodeInformation> routePath;
 	
 	public Message(String sourceIPAddress, int sourcePortNumber, String destiantionIPAddress, int destiantionPortNumber, int payload) {
 		this.sourceIPAddress = sourceIPAddress;
@@ -35,15 +41,21 @@ public class Message implements Event {
 		this.destiantionPortNumber = destiantionPortNumber;
 		this.payload = payload;
 	}
+	
+	public Message(NodeInformation source, NodeInformation dest, int payload, ArrayList<NodeInformation> route) {
+		this.sourceNode = source;
+		this.destinationNode = dest;
+		this.payload = payload;
+		this.routePath = route;
+	}
 
 	/**
 	 * byte[] construction is as follows:
 	 * type
-	 * sourceIPAddress
-	 * sourcePortNumber
-	 * destiantionIPAddress
-	 * destiantionPortNumber
+	 * source NodeInformation
+	 * destiantion NodeInformation
 	 * payload
+	 * ArrayList<NodeInformation> routePath
 	 * @throws IOException 
 	 */
 	public Message(byte[] marshalledBytes) throws IOException {
@@ -52,34 +64,37 @@ public class Message implements Event {
 		
 		int type = din.readInt();
 		
-		if (type != Protocol.REGISTER_REQUEST) {
+		if (type != Protocol.MESSAGE) {
 			System.out.println("Invalid Message Type for RegisterRequest");
 			return;
 		}
 		
-		int sourceIPAddressLength = din.readInt();
-		byte[] sourceIPAddressBytes = new byte[sourceIPAddressLength];
-		din.readFully(sourceIPAddressBytes);
+		int sourceNILength = din.readInt();
+		byte[] sourceNIBytes = new byte[sourceNILength];
+		din.readFully(sourceNIBytes);
 		
-		this.sourceIPAddress = new String(sourceIPAddressBytes);
+		this.sourceNode = new NodeInformation(sourceNIBytes);
 		
-		int sourcePortNumber = din.readInt();
-
-		this.sourcePortNumber = sourcePortNumber;
+		int destNILength = din.readInt();
+		byte[] destNIBytes = new byte[destNILength];
+		din.readFully(destNIBytes);
 		
-		int destiantionIPAddressLength = din.readInt();
-		byte[] destiantionIPAddressBytes = new byte[destiantionIPAddressLength];
-		din.readFully(destiantionIPAddressBytes);
-		
-		this.destiantionIPAddress = new String(destiantionIPAddressBytes);
-		
-		int destiantionPortNumber = din.readInt();
-
-		this.destiantionPortNumber = destiantionPortNumber;
+		this.destinationNode = new NodeInformation(destNIBytes);
 		
 		int payload = din.readInt();
 
 		this.payload = payload;
+		
+		int routePathLength = din.readInt();
+		
+		this.routePath = new ArrayList<>(routePathLength);
+		
+		for (int i = 0; i < routePathLength; i++) {
+			int routeNILength = din.readInt();
+			byte[] routeNIBytes = new byte[routeNILength];
+			din.readFully(routeNIBytes);
+			this.routePath.add(new NodeInformation(routeNIBytes));
+		}
 		
 		baInputStream.close();
 		din.close();
@@ -97,21 +112,24 @@ public class Message implements Event {
 		DataOutputStream dout = new DataOutputStream(new BufferedOutputStream(baOutputStream));
 		dout.writeInt(this.type);
 		
-		byte[] sourceIPAddressBytes = this.sourceIPAddress.getBytes();
-		int sourceIPAddressLength = sourceIPAddressBytes.length;
-		dout.writeInt(sourceIPAddressLength);
-		dout.write(sourceIPAddressBytes);
+		byte[] sourceNIBytes = this.sourceNode.getBytes();
+		int sourceNILength = sourceNIBytes.length;
+		dout.writeInt(sourceNILength);
+		dout.write(sourceNIBytes);
 		
-		dout.writeInt(this.sourcePortNumber);
-		
-		byte[] destiantionIPAddressBytes = this.destiantionIPAddress.getBytes();
-		int destiantionIPAddressLength = destiantionIPAddressBytes.length;
-		dout.writeInt(destiantionIPAddressLength);
-		dout.write(destiantionIPAddressBytes);
-		
-		dout.writeInt(this.destiantionPortNumber);
+		byte[] destNIBytes = this.destinationNode.getBytes();
+		int destNILength = destNIBytes.length;
+		dout.writeInt(destNILength);
+		dout.write(destNIBytes);
 		
 		dout.writeInt(this.payload);
+		
+		for (NodeInformation ni : routePath) {
+			byte[] routeNIBytes = ni.getBytes();
+			int routeNILength = routeNIBytes.length;
+			dout.writeInt(routeNILength);
+			dout.write(routeNIBytes);
+		}
 		
 		dout.flush();
 		marshalledBytes = baOutputStream.toByteArray();
@@ -120,6 +138,4 @@ public class Message implements Event {
 		
 		return marshalledBytes;
 	}
-
-
 }
