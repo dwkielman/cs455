@@ -176,7 +176,7 @@ public class MessagingNode implements Node {
 		handleUserInput(messagingNode);
 	}
 	
-	private static void handleUserInput(Node messagingNode) {
+	private static void handleUserInput(MessagingNode messagingNode) {
 		Scanner scan = new Scanner(System.in);
 		System.out.println("MessagingNode main()");
 		
@@ -190,6 +190,7 @@ public class MessagingNode implements Node {
             	System.out.println("Starting print-shortest-path:");
             } else if (response.equals("exit-overlay")) {
             	System.out.println("Starting exit-overlay:");
+            	messagingNode.disconnectFromRegistry();
             } else {
             	System.out.println("Command unrecognized");
             }

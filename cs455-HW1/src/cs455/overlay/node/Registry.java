@@ -94,6 +94,7 @@ public class Registry implements Node {
             	registrynode.listMessagingNodes();
             } else if (response.equals("list-weights")) {
             	System.out.println("Starting List-Weights:");
+            	registrynode.listWeights();
             // e.g. setup-overlay 4 (4 is the default connections this project will apply)
             } else if (response.startsWith("setup-overlay")) {
             	try {
@@ -113,7 +114,15 @@ public class Registry implements Node {
             } else if (response.equals("send-overlay-link-weights")) {
             	System.out.println("Sending link-weights to messaging nodes");
             	registrynode.sendOverlayLinkWeights();
-            } else if (response.equals("start")) {
+            } else if (response.startsWith("start")) {
+            	try {
+            		int numRounds = Integer.parseInt(response.replaceAll("[^\\d.]", ""));
+            		
+            	} catch (NumberFormatException nfe) {
+            		System.out.println("Invalid argument. Argument must be a number.");
+        			nfe.printStackTrace();
+            	}
+            	
             	System.out.println("Starting rounds");
             } else {
             	System.out.println("Command unrecognized");
@@ -349,6 +358,25 @@ public class Registry implements Node {
 		}
 		System.out.println("end sendOverlayLinkWeights");
 	}
+	
+	/**
+	 * list information about links comprising the overlay. Each link’s information should be on a separate line and include information about the nodes that it connects and the weight of that link.
+	 */
+	private void listWeights() {
+		System.out.println("begin listWeights");
+		
+		for (Edge e : this.overlay.getEdgesList()) {
+			System.out.println(e.getSourceNode().getNodeIPAddress() + ":" + e.getSourceNode().getNodePortNumber() + " " + e.getDestationNode().getNodeIPAddress() + ":" + e.getDestationNode().getNodePortNumber() + " " + e.getWeight());
+		}
+		
+		System.out.println("end listWeights");
+	}
+	
+	
+	private void startRounds(int numberOfRounds) {
+		
+	}
+	
 	// Allows messaging nodes to register themselves. This is performed when a messaging node starts up for the first time.
 
 	// Allows messaging nodes to deregister themselves. This is performed when a messaging node leaves the overlay.
