@@ -32,7 +32,6 @@ public class LinkWeights implements Event {
 	public LinkWeights(ArrayList<Edge> edgesList) {
 		this.numberOfLinks = edgesList.size();
 		this.linkWeightsEdges = edgesList;
-		
 	}
 	
 	/**
@@ -72,6 +71,10 @@ public class LinkWeights implements Event {
 	@Override
 	public int getType() {
 		return this.type;
+	}
+	
+	public ArrayList<Edge> getlinkWeightsEdges() {
+		return this.linkWeightsEdges;
 	}
 
 	@Override

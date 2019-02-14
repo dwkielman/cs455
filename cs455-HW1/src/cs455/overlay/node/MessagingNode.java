@@ -1,11 +1,14 @@
 package cs455.overlay.node;
 
+import cs455.overlay.dijkstra.Edge;
 import cs455.overlay.transport.TCPReceiverThread;
 import cs455.overlay.transport.TCPSender;
 import cs455.overlay.transport.TCPServerThread;
+import cs455.overlay.util.OverlayCreator;
 import cs455.overlay.wireformats.DeregisterRequest;
 import cs455.overlay.wireformats.DeregisterResponse;
 import cs455.overlay.wireformats.Event;
+import cs455.overlay.wireformats.LinkWeights;
 import cs455.overlay.wireformats.Message;
 import cs455.overlay.wireformats.MessagingNodesList;
 import cs455.overlay.wireformats.NodeConnectionRequest;
@@ -47,6 +50,9 @@ public class MessagingNode implements Node {
 	
 	private TCPReceiverThread registryReceiverThread;
 	private ArrayList<NodeInformation> neighborNodes;
+	private ArrayList<NodeInformation> nonNeighborNodes;
+	private ArrayList<Edge> edgesList;
+	private OverlayCreator overlay;
 	
 	private MessagingNode(String registryHostIPAddress, int registryHostPortNumber) {
 		this.registryHostName = registryHostIPAddress;
@@ -57,6 +63,8 @@ public class MessagingNode implements Node {
 		this.sendSummation = 0;
 		this.receiveSummation = 0;
 		this.neighborNodes = new ArrayList<>();
+		this.nonNeighborNodes = new ArrayList<>();
+		this.edgesList = new ArrayList<>();
 		
 		try {
 			TCPServerThread serverThread = new TCPServerThread(0, this);
@@ -358,7 +366,27 @@ public class MessagingNode implements Node {
 	}
 
 	private void handleLinkWeights(Event event) {
+		System.out.println("begin handleLinkWeights");
+		LinkWeights linkWeights = (LinkWeights) event;
 		
+		this.edgesList = linkWeights.getlinkWeightsEdges();
+		ArrayList<NodeInformation> nodes = new ArrayList<>();
+		
+		for (Edge e : this.edgesList) {
+			// builds a list of NodeInformation for creating the overlay
+			if (!nodes.contains(e.getSourceNode())) {
+				nodes.add(e.getSourceNode());
+			}
+			
+			// adds to the of non-neighbor nodes that this node is connected to
+			if ((e.getSourceNode().getNodeIPAddress().equals(this.localHostIPAddress)) && (e.getSourceNode().getNodePortNumber() == this.localHostPortNumber) && (!this.nonNeighborNodes.contains(e.getSourceNode()))) {
+				nonNeighborNodes.add(e.getSourceNode());
+			}
+		}
+		
+		this.overlay = new OverlayCreator(nodes);
+		this.overlay.createOverlayFromEdges(edgesList);
+		System.out.println("end handleLinkWeights");
 	}
 
 	private void handleTaskInitiate(Event event) {

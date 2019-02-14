@@ -7,6 +7,7 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Scanner;
 
+import cs455.overlay.dijkstra.Edge;
 import cs455.overlay.dijkstra.ShortestPath;
 import cs455.overlay.transport.TCPSender;
 import cs455.overlay.transport.TCPServerThread;
@@ -14,6 +15,7 @@ import cs455.overlay.util.OverlayCreator;
 import cs455.overlay.wireformats.DeregisterRequest;
 import cs455.overlay.wireformats.DeregisterResponse;
 import cs455.overlay.wireformats.Event;
+import cs455.overlay.wireformats.LinkWeights;
 import cs455.overlay.wireformats.MessagingNodesList;
 import cs455.overlay.wireformats.Protocol;
 import cs455.overlay.wireformats.RegisterRequest;
@@ -325,9 +327,27 @@ public class Registry implements Node {
 		System.out.println("end sendMessagingNodesList");
 	}
 	
-	// DANIEL START HERE, SEND THE LINK WEIGHTS TO ALL OF THE NODES
 	private void sendOverlayLinkWeights() {
+		System.out.println("begin sendOverlayLinkWeights");
+		ArrayList<Edge> edgesList = this.overlay.getEdgesList();
 		
+		for (NodeInformation ni : this.nodesList) {
+			try {
+				Socket socket = new Socket(ni.getNodeIPAddress(), ni.getNodePortNumber());
+				TCPSender sender = new TCPSender(socket);
+				
+				if (DEBUG) {
+					System.out.println("Sending to " + ni.getNodeIPAddress() + " on Port " + ni.getNodePortNumber());
+				}
+				
+				LinkWeights linkWeights = new LinkWeights(edgesList);
+				sender.sendData(linkWeights.getBytes());
+				socket.close();
+			} catch  (IOException ioe) {
+				ioe.printStackTrace();
+			}
+		}
+		System.out.println("end sendOverlayLinkWeights");
 	}
 	// Allows messaging nodes to register themselves. This is performed when a messaging node starts up for the first time.
 
