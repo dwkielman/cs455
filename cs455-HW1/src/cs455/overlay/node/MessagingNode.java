@@ -1,6 +1,8 @@
 package cs455.overlay.node;
 
 import cs455.overlay.dijkstra.Edge;
+import cs455.overlay.dijkstra.RoutingCache;
+import cs455.overlay.dijkstra.ShortestPath;
 import cs455.overlay.transport.TCPReceiverThread;
 import cs455.overlay.transport.TCPSender;
 import cs455.overlay.transport.TCPServerThread;
@@ -16,12 +18,15 @@ import cs455.overlay.wireformats.NodeConnectionResponse;
 import cs455.overlay.wireformats.Protocol;
 import cs455.overlay.wireformats.RegisterRequest;
 import cs455.overlay.wireformats.RegisterResponse;
+import cs455.overlay.wireformats.TaskComplete;
+import cs455.overlay.wireformats.TaskInitiate;
 
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Random;
 import java.util.Scanner;
 
 /**
@@ -53,6 +58,7 @@ public class MessagingNode implements Node {
 	private ArrayList<NodeInformation> nonNeighborNodes;
 	private ArrayList<Edge> edgesList;
 	private OverlayCreator overlay;
+	private RoutingCache routingCache;
 	
 	private MessagingNode(String registryHostIPAddress, int registryHostPortNumber) {
 		this.registryHostName = registryHostIPAddress;
@@ -391,6 +397,83 @@ public class MessagingNode implements Node {
 	}
 
 	private void handleTaskInitiate(Event event) {
+		System.out.println("begin handleTaskInitiate");
+		TaskInitiate taskInitiate = (TaskInitiate) event;
+		
+		int numberOfRounds = taskInitiate.getNumberOfRounds();
+		this.routingCache = new RoutingCache();
+		Random random = new Random();
+		
+		for (int i = 0; i < numberOfRounds; i++) {
+			int randomNode = random.nextInt(this.nonNeighborNodes.size());
+			prepMessageToMessagingNode(this.nonNeighborNodes.get(randomNode));
+		}
+		System.out.println("end handleTaskInitiate");
+		sendTaskComplete();
+	}
+	
+	private void prepMessageToMessagingNode(NodeInformation node) {
+		ArrayList<NodeInformation> path;
+		Random random = new Random();
+		
+		// destination node has not been routed yet
+		if (!this.routingCache.isRoute(node)) {
+			ShortestPath shortestPath = new ShortestPath(this.overlay);
+			shortestPath.execute(node);
+			path = new ArrayList<>(shortestPath.getPath(node));
+			this.routingCache.addPath(node, path);
+		// destination node has already been routed before
+		} else {
+			path = this.routingCache.getPathFromRoutingCache(node);
+		}
+		
+		// payload of each message is a random integer with values that range from 2147483647 to -2147483648
+		int payload = random.nextInt();
+		Message message = new Message(new NodeInformation(this.localHostIPAddress, this.localHostPortNumber), node, payload, path);
+		this.incrementSentCounter();
+		this.addSentSummation(payload);
+		
+		// send Message to the next node on the pathlist, 0 index = this node
+		sendMessageToMessagingNode(path.get(1), message);
+	}
+	
+	private synchronized void sendMessageToMessagingNode(NodeInformation node, Message message) {
+		System.out.println("begin sendMessageToMessagingNode");
+		try {
+			Socket socket = new Socket(node.getNodeIPAddress(), node.getNodePortNumber());
+			TCPSender sender = new TCPSender(socket);
+			
+			if (DEBUG) {
+				System.out.println("Sending to " + node.getNodeIPAddress() + " on Port " + node.getNodePortNumber());
+			}
+			
+			sender.sendData(message.getBytes());
+			socket.close();
+		} catch (IOException ioe) {
+			ioe.printStackTrace();
+		}
+		System.out.println("end sendMessageToMessagingNode");
+	}
+	
+	private void sendTaskComplete() {
+		System.out.println("begin sendTaskComplete");
+		try {
+			
+			System.out.println(String.format("Attempting to connect to registry at: %s:%d", this.registryHostName, this.registryHostPortNumber));
+			Socket registrySocket = new Socket(this.registryHostName, this.registryHostPortNumber);
+			TCPSender sender = new TCPSender(registrySocket);
+			TaskComplete taskComplete = new TaskComplete(new NodeInformation(this.registryHostName, this.registryHostPortNumber));
+			
+			if (DEBUG) {
+				System.out.println("Sending to " + this.registryHostName + " on Port " + this.registryHostPortNumber);
+			}
+			
+			sender.sendData(taskComplete.getBytes());
+			registrySocket.close();
+		} catch (IOException ioe) {
+			ioe.printStackTrace();
+		}
+		System.out.println("end sendTaskComplete");
 	}
 
 	private void handleTaskSummaryRequest(Event event) {
@@ -402,7 +485,32 @@ public class MessagingNode implements Node {
 	}
 
 	private void handleMessage(Event event) {
+		System.out.println("begin handleMessage");
+		Message message = (Message) event;
 		
+		ArrayList<NodeInformation> routePath = message.getRoutePath();
+		
+		// end of the list, this node is the destination for the route path
+		if ((message.getDestinationNode().getNodeIPAddress().equals(this.localHostIPAddress)) && (message.getDestinationNode().getNodePortNumber() == this.registryHostPortNumber)) {
+			this.incrementReceivedCounter();
+			this.addReceiveSummation(message.getPayload());
+		// this node is not the end, need to find the next node on the route path
+		} else {
+			NodeInformation nextNode = null;
+			for (int i=0; i < routePath.size(); i++) {
+				nextNode = routePath.get(i);
+				if ((nextNode.getNodeIPAddress().equals(this.localHostIPAddress)) && (nextNode.getNodePortNumber() == this.localHostPortNumber)) {
+					nextNode = routePath.get(i + 1);
+					break;
+				}
+			}
+			
+			if (nextNode != null) {
+				this.incrementRelayCounter();
+				this.sendMessageToMessagingNode(nextNode, message);
+			}
+		}
+		System.out.println("end handleMessage");
 	}
 	
 	

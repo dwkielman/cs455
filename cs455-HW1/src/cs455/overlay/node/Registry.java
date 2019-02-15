@@ -12,6 +12,7 @@ import cs455.overlay.dijkstra.ShortestPath;
 import cs455.overlay.transport.TCPSender;
 import cs455.overlay.transport.TCPServerThread;
 import cs455.overlay.util.OverlayCreator;
+import cs455.overlay.util.StatisticsCollectorAndDisplay;
 import cs455.overlay.wireformats.DeregisterRequest;
 import cs455.overlay.wireformats.DeregisterResponse;
 import cs455.overlay.wireformats.Event;
@@ -20,6 +21,7 @@ import cs455.overlay.wireformats.MessagingNodesList;
 import cs455.overlay.wireformats.Protocol;
 import cs455.overlay.wireformats.RegisterRequest;
 import cs455.overlay.wireformats.RegisterResponse;
+import cs455.overlay.wireformats.TaskInitiate;
 
 /**
  * The registry maintains information about the registered messaging nodes in a registry; you can use any
@@ -35,6 +37,9 @@ public class Registry implements Node {
 	private int portNumber;
 	private ArrayList<NodeInformation> nodesList;
 	private OverlayCreator overlay;
+	private int numberOfRounds;
+	private ArrayList<StatisticsCollectorAndDisplay> trafficSummary;
+	private ArrayList<NodeInformation> unsentNodes;
 	
 	public Registry(int portNumber) {
 		this.portNumber = portNumber;
@@ -117,7 +122,7 @@ public class Registry implements Node {
             } else if (response.startsWith("start")) {
             	try {
             		int numRounds = Integer.parseInt(response.replaceAll("[^\\d.]", ""));
-            		
+            		registrynode.startRounds(numRounds);
             	} catch (NumberFormatException nfe) {
             		System.out.println("Invalid argument. Argument must be a number.");
         			nfe.printStackTrace();
@@ -150,10 +155,6 @@ public class Registry implements Node {
 			// LINK_WEIGHTS = 6005
 			case Protocol.LINK_WEIGHTS:
 				handleLinkWeights(event);
-				break;
-			// TASK_INITIATE = 6006
-			case Protocol.TASK_INITIATE:
-				handleTaskInitiate(event);
 				break;
 			// TASK_COMPLETE = 6007
 			case Protocol.TASK_COMPLETE:
@@ -274,12 +275,25 @@ public class Registry implements Node {
 		
 	}
 
-	private void handleTaskInitiate(Event event) {
-		
-	}
-
 	private void handleTaskComplete(Event event) {
 		
+		if (this.unsentNodes.isEmpty()) {
+			try {
+				// After all MessagingNodes report task completion, wait ~15 seconds before sending request to collect statistics
+				// Use Thread.sleep() in the registry (this is the ONLY place you should use this)
+				Thread.sleep(15000);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+			//
+			
+			return;
+			
+		}
+		
+		// still nodes to send the numbverOfRounds to, continue going through list
+		NodeInformation node = this.unsentNodes.remove(0);
+		sendTaskInitiate(node);
 	}
 
 	private void handleTaskSummaryResponse(Event event) {
@@ -372,9 +386,30 @@ public class Registry implements Node {
 		System.out.println("end listWeights");
 	}
 	
-	
 	private void startRounds(int numberOfRounds) {
+		this.numberOfRounds = numberOfRounds;
+		this.trafficSummary = new ArrayList<>();
+		this.unsentNodes = new ArrayList<>(this.nodesList);
 		
+		NodeInformation node = this.unsentNodes.remove(0);
+		sendTaskInitiate(node);
+	}
+	
+	private void sendTaskInitiate(NodeInformation node) {
+		System.out.println("begin sendTaskInitiate");
+		
+		try {
+			Socket socket = new Socket(node.getNodeIPAddress(), node.getNodePortNumber());
+			TCPSender sender = new TCPSender(socket);
+			
+			TaskInitiate taskInitiate = new TaskInitiate(this.numberOfRounds);
+			sender.sendData(taskInitiate.getBytes());
+			socket.close();
+		} catch  (IOException ioe) {
+			ioe.printStackTrace();
+		}
+		
+		System.out.println("end sendTaskInitiate");
 	}
 	
 	// Allows messaging nodes to register themselves. This is performed when a messaging node starts up for the first time.
