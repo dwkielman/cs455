@@ -27,20 +27,8 @@ public class Message implements Event {
 	private final int type = Protocol.MESSAGE;
 	private NodeInformation sourceNode;
 	private NodeInformation destinationNode;
-	private String sourceIPAddress;
-	private int sourcePortNumber;
-	private String destiantionIPAddress;
-	private int destiantionPortNumber;
 	private int payload;
 	private ArrayList<NodeInformation> routePath;
-	
-	public Message(String sourceIPAddress, int sourcePortNumber, String destiantionIPAddress, int destiantionPortNumber, int payload) {
-		this.sourceIPAddress = sourceIPAddress;
-		this.sourcePortNumber = sourcePortNumber;
-		this.destiantionIPAddress = destiantionIPAddress;
-		this.destiantionPortNumber = destiantionPortNumber;
-		this.payload = payload;
-	}
 	
 	public Message(NodeInformation source, NodeInformation dest, int payload, ArrayList<NodeInformation> route) {
 		this.sourceNode = source;
@@ -137,5 +125,21 @@ public class Message implements Event {
 		dout.close();
 		
 		return marshalledBytes;
+	}
+
+	public NodeInformation getSourceNode() {
+		return sourceNode;
+	}
+
+	public NodeInformation getDestinationNode() {
+		return destinationNode;
+	}
+
+	public int getPayload() {
+		return payload;
+	}
+
+	public ArrayList<NodeInformation> getRoutePath() {
+		return routePath;
 	}
 }

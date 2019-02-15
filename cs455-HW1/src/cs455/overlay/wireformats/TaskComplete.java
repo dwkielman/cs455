@@ -8,22 +8,21 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
+import cs455.overlay.node.NodeInformation;
+
 /**
  * Once a node has completed its task of sending a certain number of messages in rounds, it informs the registry of its task completion.
  * Message Type: TASK_COMPLETE (6007)
- * Node IP address (String):
- * Node Port number (int):
+ * Destination IP address and Port (NodeInformation)
  */
 
 public class TaskComplete implements Event {
 
 	private final int type = Protocol.TASK_COMPLETE;
-	private String IPAddress;
-	private int portNumber;
+	private NodeInformation nodeInformation;
 	
-	public TaskComplete(String IPAddress, int portNumber) {
-		this.IPAddress = IPAddress;
-		this.portNumber = portNumber;
+	public TaskComplete(NodeInformation nodeInfo) {
+		this.nodeInformation = nodeInfo;
 	}
 	
 	/**
@@ -44,15 +43,11 @@ public class TaskComplete implements Event {
 			return;
 		}
 		
-		int IPAddressLength = din.readInt();
-		byte[] IPAddressBytes = new byte[IPAddressLength];
-		din.readFully(IPAddressBytes);
+		int nodeInfoLength = din.readInt();
+		byte[] nodeInfoBytes = new byte[nodeInfoLength];
+		din.readFully(nodeInfoBytes);
 		
-		this.IPAddress = new String(IPAddressBytes);
-		
-		int portNumber = din.readInt();
-
-		this.portNumber = portNumber;
+		this.nodeInformation = new NodeInformation(nodeInfoBytes);
 		
 		baInputStream.close();
 		din.close();
@@ -70,12 +65,10 @@ public class TaskComplete implements Event {
 		DataOutputStream dout = new DataOutputStream(new BufferedOutputStream(baOutputStream));
 		dout.writeInt(this.type);
 		
-		byte[] IPAddressBytes = this.IPAddress.getBytes();
-		int IPAddressLength = IPAddressBytes.length;
-		dout.writeInt(IPAddressLength);
-		dout.write(IPAddressBytes);
-		
-		dout.writeInt(this.portNumber);
+		byte[] nodeInfoBytes = this.nodeInformation.getBytes();
+		int nodeInfoLength = nodeInfoBytes.length;
+		dout.writeInt(nodeInfoLength);
+		dout.write(nodeInfoBytes);
 		
 		dout.flush();
 		marshalledBytes = baOutputStream.toByteArray();
