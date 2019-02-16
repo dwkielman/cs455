@@ -17,6 +17,8 @@ public class TaskSummaryRequest implements Event {
 	
 	private final int type = Protocol.PULL_TRAFFIC_SUMMARY;
 	
+	public TaskSummaryRequest() {}
+	
 	public TaskSummaryRequest(byte[] marshalledBytes) throws IOException {
 		ByteArrayInputStream baInputStream = new ByteArrayInputStream(marshalledBytes);
 		DataInputStream din = new DataInputStream(new BufferedInputStream(baInputStream));

@@ -132,4 +132,32 @@ public class TaskSummaryResponse implements Event {
 		return marshalledBytes;
 	}
 
+	public String getIPAddress() {
+		return IPAddress;
+	}
+
+	public int getPortNumber() {
+		return portNumber;
+	}
+
+	public int getNumberOfMessagesSent() {
+		return numberOfMessagesSent;
+	}
+
+	public long getSumSentMessages() {
+		return sumSentMessages;
+	}
+
+	public int getNumberOfMessagesReceived() {
+		return numberOfMessagesReceived;
+	}
+
+	public long getSumReceivedMessages() {
+		return sumReceivedMessages;
+	}
+
+	public int getNumberOfMessagesRelayed() {
+		return numberOfMessagesRelayed;
+	}
+
 }
