@@ -22,6 +22,8 @@ import cs455.overlay.wireformats.Protocol;
 import cs455.overlay.wireformats.RegisterRequest;
 import cs455.overlay.wireformats.RegisterResponse;
 import cs455.overlay.wireformats.TaskInitiate;
+import cs455.overlay.wireformats.TaskSummaryRequest;
+import cs455.overlay.wireformats.TaskSummaryResponse;
 
 /**
  * The registry maintains information about the registered messaging nodes in a registry; you can use any
@@ -38,7 +40,7 @@ public class Registry implements Node {
 	private ArrayList<NodeInformation> nodesList;
 	private OverlayCreator overlay;
 	private int numberOfRounds;
-	private ArrayList<StatisticsCollectorAndDisplay> trafficSummary;
+	private StatisticsCollectorAndDisplay trafficSummary;
 	private ArrayList<NodeInformation> unsentNodes;
 	
 	public Registry(int portNumber) {
@@ -121,14 +123,13 @@ public class Registry implements Node {
             	registrynode.sendOverlayLinkWeights();
             } else if (response.startsWith("start")) {
             	try {
+            		System.out.println("Starting rounds");
             		int numRounds = Integer.parseInt(response.replaceAll("[^\\d.]", ""));
             		registrynode.startRounds(numRounds);
             	} catch (NumberFormatException nfe) {
             		System.out.println("Invalid argument. Argument must be a number.");
         			nfe.printStackTrace();
             	}
-            	
-            	System.out.println("Starting rounds");
             } else {
             	System.out.println("Command unrecognized");
             }
@@ -148,14 +149,6 @@ public class Registry implements Node {
 			case Protocol.DEREGISTER_REQUEST:
 				handleDeregisterRequest(event);
 				break;
-			// MESSAGING_NODES_LIST = 6004
-			case Protocol.MESSAGING_NODES_LIST:
-				handleMessagingNodesList(event);
-				break;
-			// LINK_WEIGHTS = 6005
-			case Protocol.LINK_WEIGHTS:
-				handleLinkWeights(event);
-				break;
 			// TASK_COMPLETE = 6007
 			case Protocol.TASK_COMPLETE:
 				handleTaskComplete(event);
@@ -163,10 +156,6 @@ public class Registry implements Node {
 			// TRAFFIC_SUMMARY = 6009
 			case Protocol.TRAFFIC_SUMMARY:
 				handleTaskSummaryResponse(event);
-				break;
-			// MESSAGE = 6010
-			case Protocol.MESSAGE:
-				handleMessage(event);
 				break;
 			default:
 				System.out.println("Invalid Event to Node.");
@@ -267,14 +256,6 @@ public class Registry implements Node {
 		System.out.println("end sendDeregistrationResponse");
 	}
 
-	private void handleMessagingNodesList(Event event) {
-		
-	}
-
-	private void handleLinkWeights(Event event) {
-		
-	}
-
 	private void handleTaskComplete(Event event) {
 		
 		if (this.unsentNodes.isEmpty()) {
@@ -285,23 +266,42 @@ public class Registry implements Node {
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
-			//
-			
+			sendTaskSummaryRequest();
 			return;
-			
 		}
 		
 		// still nodes to send the numbverOfRounds to, continue going through list
 		NodeInformation node = this.unsentNodes.remove(0);
 		sendTaskInitiate(node);
 	}
-
-	private void handleTaskSummaryResponse(Event event) {
+	
+	private void sendTaskSummaryRequest() {
+		System.out.println("begin sendTaskSummaryRequest");
+		ArrayList<Edge> edgesList = this.overlay.getEdgesList();
 		
+		for (NodeInformation ni : this.nodesList) {
+			try {
+				Socket socket = new Socket(ni.getNodeIPAddress(), ni.getNodePortNumber());
+				TCPSender sender = new TCPSender(socket);
+				
+				if (DEBUG) {
+					System.out.println("Sending to " + ni.getNodeIPAddress() + " on Port " + ni.getNodePortNumber());
+				}
+				
+				TaskSummaryRequest taskSummaryRequest = new TaskSummaryRequest();
+				sender.sendData(taskSummaryRequest.getBytes());
+				socket.close();
+			} catch  (IOException ioe) {
+				ioe.printStackTrace();
+			}
+		}
+		
+		System.out.println("end sendTaskSummaryRequest");
 	}
 
-	private void handleMessage(Event event) {
-		
+	private void handleTaskSummaryResponse(Event event) {
+		TaskSummaryResponse taskSummaryResponse = (TaskSummaryResponse) event;
+		this.trafficSummary.addTrafficSummary(taskSummaryResponse);
 	}
 	
 	/**
@@ -388,7 +388,7 @@ public class Registry implements Node {
 	
 	private void startRounds(int numberOfRounds) {
 		this.numberOfRounds = numberOfRounds;
-		this.trafficSummary = new ArrayList<>();
+		this.trafficSummary = new StatisticsCollectorAndDisplay(this.nodesList.size());
 		this.unsentNodes = new ArrayList<>(this.nodesList);
 		
 		NodeInformation node = this.unsentNodes.remove(0);

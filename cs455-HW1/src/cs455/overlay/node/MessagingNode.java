@@ -20,6 +20,7 @@ import cs455.overlay.wireformats.RegisterRequest;
 import cs455.overlay.wireformats.RegisterResponse;
 import cs455.overlay.wireformats.TaskComplete;
 import cs455.overlay.wireformats.TaskInitiate;
+import cs455.overlay.wireformats.TaskSummaryResponse;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -52,8 +53,7 @@ public class MessagingNode implements Node {
 	private long sendSummation;
 	// track the messages that it has received. sums values of the payloads that are received
 	private long receiveSummation;
-	
-	private TCPReceiverThread registryReceiverThread;
+
 	private ArrayList<NodeInformation> neighborNodes;
 	private ArrayList<NodeInformation> nonNeighborNodes;
 	private ArrayList<Edge> edgesList;
@@ -122,10 +122,6 @@ public class MessagingNode implements Node {
 			// PULL_TRAFFIC_SUMMARY = 6008
 			case Protocol.PULL_TRAFFIC_SUMMARY:
 				handleTaskSummaryRequest(event);
-				break;
-			// TRAFFIC_SUMMARY = 6009
-			case Protocol.TRAFFIC_SUMMARY:
-				handleTaskSummaryResponse(event);
 				break;
 			// MESSAGE = 6010
 			case Protocol.MESSAGE:
@@ -457,8 +453,8 @@ public class MessagingNode implements Node {
 	
 	private void sendTaskComplete() {
 		System.out.println("begin sendTaskComplete");
+		
 		try {
-			
 			System.out.println(String.format("Attempting to connect to registry at: %s:%d", this.registryHostName, this.registryHostPortNumber));
 			Socket registrySocket = new Socket(this.registryHostName, this.registryHostPortNumber);
 			TCPSender sender = new TCPSender(registrySocket);
@@ -473,15 +469,40 @@ public class MessagingNode implements Node {
 		} catch (IOException ioe) {
 			ioe.printStackTrace();
 		}
+		
 		System.out.println("end sendTaskComplete");
 	}
 
+	/**
+	 * Node IP address (String):
+	 * Node Port number (int):
+	 * Number of messages sent (int)
+	 * Summation of sent messages (long)
+	 * Number of messages received (int)
+	 * Summation of received messages (long)
+	 * Number of messages relayed (int)
+	 */
 	private void handleTaskSummaryRequest(Event event) {
-		
-	}
-
-	private void handleTaskSummaryResponse(Event event) {
-		
+		try {
+			System.out.println(String.format("Attempting to connect to registry at: %s:%d", this.registryHostName, this.registryHostPortNumber));
+			Socket registrySocket = new Socket(this.registryHostName, this.registryHostPortNumber);
+			TCPSender sender = new TCPSender(registrySocket);
+			TaskSummaryResponse taskSummaryReponse = new TaskSummaryResponse(this.localHostIPAddress, this.localHostPortNumber, this.sendTracker, this.sendSummation, this.receiveTracker, this.receiveSummation, this.relayTracker);
+			
+			if (DEBUG) {
+				System.out.println("Sending to " + this.registryHostName + " on Port " + this.registryHostPortNumber);
+			}
+			
+			sender.sendData(taskSummaryReponse.getBytes());
+			clearSentCounter();
+			clearReceivedCounter();
+			clearRelayCounter();
+			clearReceivedSummation();
+			clearSendSummation();
+			registrySocket.close();
+		} catch (IOException ioe) {
+			ioe.printStackTrace();
+		}
 	}
 
 	private void handleMessage(Event event) {
@@ -512,8 +533,6 @@ public class MessagingNode implements Node {
 		}
 		System.out.println("end handleMessage");
 	}
-	
-	
 	
 	/**
      * Create this as synchronized so that two threads can't update the counter simultaneously.
