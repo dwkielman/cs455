@@ -44,12 +44,14 @@ public class DeregisterRequest implements Event {
 			return;
 		}
 		
+		// IPAddress
 		int IPAddressLength = din.readInt();
 		byte[] IPAddressBytes = new byte[IPAddressLength];
 		din.readFully(IPAddressBytes);
 		
 		this.IPAddress = new String(IPAddressBytes);
 		
+		// portNumber
 		int portNumber = din.readInt();
 
 		this.portNumber = portNumber;
@@ -70,11 +72,13 @@ public class DeregisterRequest implements Event {
 		DataOutputStream dout = new DataOutputStream(new BufferedOutputStream(baOutputStream));
 		dout.writeInt(this.type);
 		
+		// IPAddress
 		byte[] IPAddressBytes = this.IPAddress.getBytes();
 		int IPAddressLength = IPAddressBytes.length;
 		dout.writeInt(IPAddressLength);
 		dout.write(IPAddressBytes);
 		
+		// portNumber
 		dout.writeInt(this.portNumber);
 		
 		dout.flush();

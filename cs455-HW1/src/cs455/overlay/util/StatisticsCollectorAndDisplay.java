@@ -29,7 +29,7 @@ public class StatisticsCollectorAndDisplay {
 		this.nodes = nodes;
 	}
 	
-	public synchronized void addTrafficSummary(TaskSummaryResponse taskSummaryResponse) {
+	public void addTrafficSummary(TaskSummaryResponse taskSummaryResponse) {
 		this.stats.add(taskSummaryResponse);
 		this.sendTracker += taskSummaryResponse.getNumberOfMessagesSent();
 		this.receiveTracker += taskSummaryResponse.getNumberOfMessagesReceived();
@@ -62,6 +62,7 @@ public class StatisticsCollectorAndDisplay {
 		summary += "Sum\t";
 		summary += this.sendTracker + "\t";
 		summary += this.receiveTracker + "\t";
+		summary += this.relayTracker + "\t";
 		summary += this.sendSummation + "\t";
 		summary += this.receiveSummation;
 		System.out.println(summary);

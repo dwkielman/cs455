@@ -8,13 +8,12 @@ import java.net.SocketException;
 import cs455.overlay.node.Node;
 import cs455.overlay.wireformats.EventFactory;
 
-public class TCPReceiverThread implements Runnable {
+public class TCPReceiverThread extends Thread {
 
 	private Socket socket;
 	private DataInputStream din;
 	private Node node;
 	private EventFactory eventFactory;
-	private static final boolean DEBUG = true;
 		
 	public TCPReceiverThread(Socket socket, Node node) throws IOException {
 		this.node = node;
@@ -22,18 +21,15 @@ public class TCPReceiverThread implements Runnable {
 		this.eventFactory = EventFactory.getInstance();
 		din = new DataInputStream(socket.getInputStream());
 	}
-		
+	
 	@Override
-	public void run() {
+	public synchronized void run() {
 		
 		int dataLength;
 		
 		while (socket != null) {
 			try {
-				if (DEBUG) System.out.println("TCPReceiverThread waiting for message length...");
 				dataLength = din.readInt();
-				if (DEBUG) System.out.println("TCPReceiverThread received message of length: " + dataLength);
-				if (DEBUG) System.out.println("TCPReceiverThread awaiting byte array message delivery...");
 				byte[] data = new byte[dataLength];
 				din.readFully(data, 0, dataLength);
 				
@@ -41,13 +37,16 @@ public class TCPReceiverThread implements Runnable {
 				eventFactory.createEvent(data, this.node);
 				
 			} catch (SocketException se) {
+				System.out.println("SocketException in TCPReceiverThread");
+				//System.out.println(se.getStackTrace());
 				System.out.println(se.getMessage());
 				break;
 			} catch (IOException ioe) {
+				System.out.println("IOException in TCPReceiverThread");
+				//System.out.println(ioe.getStackTrace());
 				System.out.println(ioe.getMessage());
 				break;
 			}
 		}
-		if (DEBUG) System.out.println("  TCPReceiverThread exiting.");
 	}
 }

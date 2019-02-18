@@ -40,12 +40,14 @@ public class DeregisterResponse implements Event {
 		int type = din.readInt();
 		
 		if (type != Protocol.DEREGISTER_RESPONSE) {
-			System.out.println("Invalid Message Type for RegisterResponse");
+			System.out.println("Invalid Message Type for DeregisterResponse");
 			return;
 		}
 		
+		// statusCode
 		this.statusCode = din.readByte();
 		
+		// additionalInfo
 		int additionalInfoLength = din.readInt();
 		byte[] additionalInfoBytes = new byte[additionalInfoLength];
 		din.readFully(additionalInfoBytes);
@@ -68,8 +70,10 @@ public class DeregisterResponse implements Event {
 		DataOutputStream dout = new DataOutputStream(new BufferedOutputStream(baOutputStream));
 		dout.writeInt(this.type);
 		
+		// statusCode
 		dout.writeByte(this.statusCode);
 		
+		// additionalInfo
 		byte[] additionalInfoBytes = this.additionalInfo.getBytes();
 		int additionalInfoLength = additionalInfoBytes.length;
 		dout.writeInt(additionalInfoLength);

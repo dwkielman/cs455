@@ -14,7 +14,7 @@ import cs455.overlay.node.Node;
 public class EventFactory {
 	
 	private static final EventFactory eventFactory = new EventFactory();
-	private static final boolean DEBUG = true;
+	private static final boolean DEBUG = false;
 	
 	private EventFactory() {};
 	
@@ -22,7 +22,7 @@ public class EventFactory {
 		return eventFactory;
 	}
 	
-	public void createEvent(byte[] marshalledBytes, Node node) {
+	public synchronized void createEvent(byte[] marshalledBytes, Node node) {
 		ByteArrayInputStream baInputStream = new ByteArrayInputStream(marshalledBytes);
 		DataInputStream din = new DataInputStream(new BufferedInputStream(baInputStream));
 		
@@ -32,9 +32,7 @@ public class EventFactory {
 			baInputStream.close();
 			din.close();
 			
-			if (DEBUG) {
-				System.out.println("Message Type being passed is: " + type);
-			}
+			if (DEBUG) { System.out.println("Message Type being passed is: " + type); }
 			
 			switch(type) {
 				// REGISTER_REQUEST = 6000
@@ -83,16 +81,17 @@ public class EventFactory {
 					break;
 				// NODE_CONNECTION_REQUEST = 6011
 				case Protocol.NODE_CONNECTION_REQUEST:
-					event = new Message(marshalledBytes);
+					event = new NodeConnectionRequest(marshalledBytes);
 					break;
 				// NODE_CONNECTION_RESPONSE = 6012
 				case Protocol.NODE_CONNECTION_RESPONSE:
-					event = new Message(marshalledBytes);
+					event = new NodeConnectionResponse(marshalledBytes);
 					break;
 				default:
 					System.out.println("Invalid Message Type");
 					return;
 			}
+			// notify the node of the event type and its bytes
 			node.onEvent(event);
 		} catch (IOException ioe) {
 			ioe.printStackTrace();

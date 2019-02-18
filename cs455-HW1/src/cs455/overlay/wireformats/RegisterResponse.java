@@ -45,12 +45,14 @@ public class RegisterResponse implements Event {
 			return;
 		}
 		
+		// statusCode
 		this.statusCode = din.readByte();
 		
 		int additionalInfoLength = din.readInt();
 		byte[] additionalInfoBytes = new byte[additionalInfoLength];
 		din.readFully(additionalInfoBytes);
 		
+		// additionalInfo
 		this.additionalInfo = new String(additionalInfoBytes);
 
 		baInputStream.close();
@@ -71,8 +73,10 @@ public class RegisterResponse implements Event {
 		DataOutputStream dout = new DataOutputStream(new BufferedOutputStream(baOutputStream));
 		dout.writeInt(this.type);
 		
+		// statusCode
 		dout.writeByte(this.statusCode);
 		
+		// additionalInfo
 		byte[] additionalInfoBytes = this.additionalInfo.getBytes();
 		int additionalInfoLength = additionalInfoBytes.length;
 		dout.writeInt(additionalInfoLength);

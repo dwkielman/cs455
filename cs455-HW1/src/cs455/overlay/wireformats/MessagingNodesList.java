@@ -51,9 +51,12 @@ public class MessagingNodesList implements Event {
 			return;
 		}
 		
+		// numberOfPeerMessagingNodes
 		int numberOfPeerNodes = din.readInt();
 		this.numberOfPeerMessagingNodes = numberOfPeerNodes;
 		
+		// messagingNodesInfoList
+		// declare as size of the number of messaging nodes that we are being passed
 		this.messagingNodesInfoList = new ArrayList<>(this.numberOfPeerMessagingNodes);
 		
 		for (int i=0; i < this.numberOfPeerMessagingNodes; i++) {
@@ -79,8 +82,10 @@ public class MessagingNodesList implements Event {
 		DataOutputStream dout = new DataOutputStream(new BufferedOutputStream(baOutputStream));
 		dout.writeInt(this.type);
 		
+		// numberOfPeerMessagingNodes
 		dout.writeInt(numberOfPeerMessagingNodes);
 		
+		// messagingNodesInfoList
 		for (NodeInformation n : this.messagingNodesInfoList) {
 			byte[] mNIBytes = n.getBytes();
 			int mNILength = mNIBytes.length;
@@ -97,11 +102,11 @@ public class MessagingNodesList implements Event {
 	}
 
 	public int getNumberOfPeerMessagingNodes() {
-		return numberOfPeerMessagingNodes;
+		return this.numberOfPeerMessagingNodes;
 	}
 
 	public ArrayList<NodeInformation> getMessagingNodesInfoList() {
-		return messagingNodesInfoList;
+		return this.messagingNodesInfoList;
 	}
 
 }

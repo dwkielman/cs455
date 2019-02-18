@@ -5,12 +5,13 @@ import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 
 import cs455.overlay.node.Node;
 
 public class TCPServerThread extends Thread {
 	
-	private static final boolean DEBUG = true;
+	private static final boolean DEBUG = false;
 	private Node node;
 	private ServerSocket ourServerSocket;
 	private String hostIPAddress;
@@ -30,17 +31,13 @@ public class TCPServerThread extends Thread {
 		}
 	}
 	
-	public void run() {
-		
+	public synchronized void run() {
 		// get the current host IP address
 		try {
 			this.hostIPAddress = InetAddress.getLocalHost().getHostAddress();
 		} catch (UnknownHostException uhe) {
 			uhe.printStackTrace();
 		}
-		
-		// assign the port to the actual port number
-		//this.portNumber = ourServerSocket.getLocalPort();
 		
 		if (DEBUG) {
 			System.out.println("Node is now listening on IP: " + this.hostIPAddress + " Port: " + this.portNumber);
@@ -51,13 +48,12 @@ public class TCPServerThread extends Thread {
 				//Block on accepting connections. Once it has received a connection it will return a socket for us to use.
 				Socket incomingConnectionSocket = ourServerSocket.accept();
 				TCPReceiverThread tcpReceiverThread = new TCPReceiverThread(incomingConnectionSocket, this.node);
-				tcpReceiverThread.run();
+				tcpReceiverThread.start();
 			} catch (IOException e) {
 				e.printStackTrace();
-				System.out.println("TCPServerThread::accepting_connections:: " + e);
+				System.out.println("IOException in TCPServerThread");
 	            System.exit(1);
 			}
 		}
 	}
-
 }

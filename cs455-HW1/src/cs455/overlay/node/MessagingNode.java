@@ -27,16 +27,21 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.ListIterator;
 import java.util.Random;
 import java.util.Scanner;
+import java.util.concurrent.TimeUnit;
 
 /**
  * A messaging node provides two closely related functions: it initiates and accepts both communications and messages within the system.
+ * The MessagingNode can be run after being compiled using the following format:
+ * java cs455.overlay.node.MessagingNode registry-host(IP Address) registry-port (Integer)
  */
 
 public class MessagingNode implements Node {
 
-	private static boolean DEBUG = true;
+	private static boolean DEBUG = false;
 	
 	private String localHostIPAddress;
 	private int localHostPortNumber;
@@ -56,9 +61,13 @@ public class MessagingNode implements Node {
 
 	private ArrayList<NodeInformation> neighborNodes;
 	private ArrayList<NodeInformation> nonNeighborNodes;
+	private ArrayList<NodeInformation> connectedNeighborNodes;
+	private HashMap<NodeInformation, TCPSender> messagingNodeSenders;
 	private ArrayList<Edge> edgesList;
 	private OverlayCreator overlay;
 	private RoutingCache routingCache;
+	private TCPReceiverThread registryTCPReceiverThread;
+	private TCPSender registrySender;
 	
 	private MessagingNode(String registryHostIPAddress, int registryHostPortNumber) {
 		this.registryHostName = registryHostIPAddress;
@@ -68,24 +77,22 @@ public class MessagingNode implements Node {
 		this.relayTracker = 0;
 		this.sendSummation = 0;
 		this.receiveSummation = 0;
-		this.neighborNodes = new ArrayList<>();
-		this.nonNeighborNodes = new ArrayList<>();
+		this.messagingNodeSenders = new HashMap<NodeInformation, TCPSender>();
 		this.edgesList = new ArrayList<>();
 		
 		try {
 			TCPServerThread serverThread = new TCPServerThread(0, this);
 			serverThread.start();
-			if (DEBUG) {
-				System.out.println("My server port number is: " + this.localHostPortNumber);
-			}
-			this.localHostIPAddress = InetAddress.getLocalHost().getCanonicalHostName();
-			if (DEBUG) {
-				System.out.println("My host IP Address is: " + this.localHostIPAddress);
-			}
 			
+			if (DEBUG) { System.out.println("My server port number is: " + this.localHostPortNumber); }
+			
+			this.localHostIPAddress = InetAddress.getLocalHost().getCanonicalHostName();
+			
+			if (DEBUG) { System.out.println("My host IP Address is: " + this.localHostIPAddress); }
 		} catch (UnknownHostException uhe) {
 			uhe.printStackTrace();
 		}
+		// Once the initialization is complete, MessagingNode should send a registration request to the Registry.
 		connectToRegistry();
 	}
 	
@@ -97,7 +104,7 @@ public class MessagingNode implements Node {
 	@Override
 	public void onEvent(Event event) {
 		int eventType = event.getType();
-		System.out.println("Event " + eventType + "Passed to MessagingNode.");
+		System.out.println("Event " + eventType + " Passed to MessagingNode.");
 		switch(eventType) {
 			// REGISTER_RESPONSE = 6001
 			case Protocol.REGISTER_RESPONSE:
@@ -138,14 +145,9 @@ public class MessagingNode implements Node {
 			default:
 				System.out.println("Invalid Event to Node.");
 				return;
-			}
 		}
-		
-	// Communications that nodes have with each other are based on TCP. Each messaging node needs to automatically configure the ports over which it listens for communications
-
-	// Once the initialization is complete, the node should send a registration request to the registry.
+	}
 	
-	// java cs455.overlay.node.MessagingNode registry-host registry-port
 	public static void main(String[] args) {
 		
 		// requires 2 arguments to initialize a node
@@ -180,19 +182,21 @@ public class MessagingNode implements Node {
 	
 	private static void handleUserInput(MessagingNode messagingNode) {
 		Scanner scan = new Scanner(System.in);
-		System.out.println("MessagingNode main()");
 		
-		System.out.println("MessagingNode accepting commands ...");
+		System.out.println("MessagingNode ready for input.");
         while(true) {
-            System.out.println("Enter command: ");
+            System.out.println("Please enter your command: ");
             String response = scan.nextLine();
-            System.out.println("You typed: " + response);
+            if (DEBUG) { System.out.println("User enetered: " + response); }
             
             if (response.equals("print-shortest-path")) {
             	System.out.println("Starting print-shortest-path:");
+            	messagingNode.printShortestPath();
             } else if (response.equals("exit-overlay")) {
             	System.out.println("Starting exit-overlay:");
             	messagingNode.disconnectFromRegistry();
+            } else if (response.equals("print-nodes")) {
+            	messagingNode.printNodes();
             } else {
             	System.out.println("Command unrecognized");
             }
@@ -205,29 +209,38 @@ public class MessagingNode implements Node {
 	 * IP address (String)
 	 * Port number (int)
 	 */
-	private synchronized void connectToRegistry() {
-		System.out.println("begin MessagingNode connectToRegistry");
+	// DANIEL: Still need to test multiple connections being made at the same time on the same server
+	private void connectToRegistry() {
+		if (DEBUG) { System.out.println("begin MessagingNode connectToRegistry"); }
 		try {
 			System.out.println(String.format("Attempting to connect to registry at: %s:%d", this.registryHostName, this.registryHostPortNumber));
 			Socket registrySocket = new Socket(this.registryHostName, this.registryHostPortNumber);
 			
+			System.out.println("Starting TCPReceiverThread with Registry");
+			registryTCPReceiverThread = new TCPReceiverThread(registrySocket, this);
+			registryTCPReceiverThread.start();
+			System.out.println("TCPReceiverThread with Registry started");
 			System.out.println("Sending to " + this.registryHostName + " on Port " + this.registryHostPortNumber);
 			
-			TCPSender registrySender = new TCPSender(registrySocket);
+			this.registrySender = new TCPSender(registrySocket);
 			
 			RegisterRequest registryRequest = new RegisterRequest(this.localHostIPAddress, this.localHostPortNumber);
-			registrySender.sendData(registryRequest.getBytes());
+
+			if (DEBUG) { System.out.println("MessagingNode about to send message type: " + registryRequest.getType()); }
 			
+			this.registrySender.sendData(registryRequest.getBytes());
 		} catch (IOException ioe) {
 			ioe.printStackTrace();
 			System.exit(1);
 		}
-		System.out.println("end MessagingNode connectToRegistry");
+		if (DEBUG) { System.out.println("end MessagingNode connectToRegistry"); }
 	}
 
 	private void handleRegisterResponse(Event event) {
-		System.out.println("begin MessagingNode handleRegisterResponse");
+		if (DEBUG) { System.out.println("begin MessagingNode handleRegisterResponse"); }
 		RegisterResponse registerResponse = (RegisterResponse) event;
+		if (DEBUG) { System.out.println("MessagingNode got a message type: " + registerResponse.getType()); }
+		
 		// successful registration
 		if (registerResponse.getStatusCode() == (byte) 1) {
 			System.out.println("Registration Request Succeeded.");
@@ -238,32 +251,34 @@ public class MessagingNode implements Node {
             System.out.println(String.format("Message: %s", registerResponse.getAdditionalInfo()));
             System.exit(0);
 		}
-		System.out.println("end MessagingNode handleRegisterResponse");
+		if (DEBUG) { System.out.println("end MessagingNode handleRegisterResponse"); }
 	}
 	
 	private void disconnectFromRegistry() {
-		System.out.println("begin MessagingNode disconnectFromRegistry");
+		if (DEBUG) { System.out.println("begin MessagingNode disconnectFromRegistry"); }
 		try {
 			System.out.println(String.format("Attempting to disconnect to registry at: %s:%d", this.registryHostName, this.registryHostPortNumber));
-			Socket registrySocket = new Socket(this.registryHostName, this.registryHostPortNumber);
 			
 			System.out.println("Sending Dergister Request to " + this.registryHostName + " on Port " + this.registryHostPortNumber);
 			
-			TCPSender registrySender = new TCPSender(registrySocket);
-			
 			DeregisterRequest deregistryRequest = new DeregisterRequest(this.localHostIPAddress, this.localHostPortNumber);
-			registrySender.sendData(deregistryRequest.getBytes());
+			
+			if (DEBUG) { System.out.println("MessagingNode about to send message type: " + deregistryRequest.getType()); }
+			
+			this.registrySender.sendData(deregistryRequest.getBytes());
 			
 		} catch (IOException ioe) {
 			ioe.printStackTrace();
 			System.exit(1);
 		}
-		System.out.println("end MessagingNode disconnectFromRegistry");
+		if (DEBUG) { System.out.println("end MessagingNode disconnectFromRegistry"); }
 	}
 
 	private void handleDeregisterResponse(Event event) {
-		System.out.println("begin MessagingNode handleDeregisterResponse");
+		if (DEBUG) { System.out.println("begin MessagingNode handleDeregisterResponse"); }
 		DeregisterResponse deregisterResponse = (DeregisterResponse) event;
+		if (DEBUG) { System.out.println("MessagingNode got a message type: " + deregisterResponse.getType()); }
+		
 		// successful deregistration
 		if (deregisterResponse.getStatusCode() == (byte) 1) {
 			System.out.println("Deregistration Request Succeeded.");
@@ -274,203 +289,315 @@ public class MessagingNode implements Node {
             System.out.println(String.format("Message: %s", deregisterResponse.getAdditionalInfo()));
             System.exit(0);
 		}
-		System.out.println("end MessagingNode handleDeregisterResponse");
+		if (DEBUG) { System.out.println("end MessagingNode handleDeregisterResponse"); }
 	}
 
 	private void handleMessagingNodesList(Event event) {
-		System.out.println("begin MessagingNode handleMessagingNodesList");
-		MessagingNodesList messagingNodesList = (MessagingNodesList) event;
-		ArrayList<NodeInformation> nodesToConnectTo = new ArrayList<>(messagingNodesList.getMessagingNodesInfoList());
+		if (DEBUG) { System.out.println("begin MessagingNode handleMessagingNodesList"); }
 		
-		for (NodeInformation ni : nodesToConnectTo) {
+		MessagingNodesList messagingNodesList = (MessagingNodesList) event;
+		
+		if (DEBUG) { System.out.println("MessagingNode got a message type: " + messagingNodesList.getType()); }
+		
+		this.neighborNodes = new ArrayList<>(messagingNodesList.getMessagingNodesInfoList());
+		
+		if (DEBUG) { 
+			System.out.println("I am going to connect to the following nodes: ");
+			
+			for (NodeInformation ni : this.neighborNodes) {
+				System.out.println("Node " + ni.getNodeIPAddress());
+			}
+		}
+		
+		for (NodeInformation ni : this.neighborNodes) {
 			connectToMessagingNode(ni);
 		}
-		
-		if (this.neighborNodes.size() == messagingNodesList.getNumberOfPeerMessagingNodes()) {
-			System.out.println("All connections are established. Number of connections: " + this.neighborNodes.size());
-		} else {
-			System.out.println("Number of Connections is currently: " + this.neighborNodes.size());
-		}
-		System.out.println("end MessagingNode handleMessagingNodesList");
-	}
-	
-	private void connectToMessagingNode(NodeInformation nodeToConnectTo) {
 
+		if (DEBUG) { System.out.println("end MessagingNode handleMessagingNodesList"); }
+	}
+
+	// Communications that nodes have with each other are based on TCP. Each messaging node needs to automatically configure the ports over which it listens for communications
+	private void connectToMessagingNode(NodeInformation nodeToConnectTo) {
+		if (DEBUG) { System.out.println("begin MessagingNode connectToMessagingNode"); }
 		try {
 			System.out.println(String.format("Attempting to connect to messagingNode at: %s:%d", nodeToConnectTo.getNodeIPAddress(), nodeToConnectTo.getNodePortNumber()));
 			Socket nodeSocket = new Socket(nodeToConnectTo.getNodeIPAddress(), nodeToConnectTo.getNodePortNumber());
 			
-			System.out.println("Sending to " + nodeToConnectTo.getNodeIPAddress() + " on Port " + nodeToConnectTo.getNodePortNumber());
+			if (DEBUG) { System.out.println("Sending to " + nodeToConnectTo.getNodeIPAddress() + " on Port " + nodeToConnectTo.getNodePortNumber()); }
 			
 			TCPSender nodeSender = new TCPSender(nodeSocket);
 			
 			NodeConnectionRequest nodeConnectionRequest = new NodeConnectionRequest(new NodeInformation(this.localHostIPAddress, this.localHostPortNumber));
+			if (DEBUG) { System.out.println("MessagingNode about to send message type: " + nodeConnectionRequest.getType()); }
 			nodeSender.sendData(nodeConnectionRequest.getBytes());
 			
 		} catch (IOException ioe) {
 			ioe.printStackTrace();
 			System.exit(1);
 		}
+		if (DEBUG) { System.out.println("end MessagingNode connectToMessagingNode"); }
 	}
 	
-	private void handleNodeConnectionRequest(Event event) {
-		System.out.println("begin handleNodeConnectionRequest");
+	private synchronized void handleNodeConnectionRequest(Event event) {
+		if (DEBUG) { System.out.println("begin MessagingNode handleNodeConnectionRequest"); }
 		NodeConnectionRequest nodeConnectionRequest = (NodeConnectionRequest) event;
-		
+		if (DEBUG) { System.out.println("MessagingNode got a message type: " + nodeConnectionRequest.getType()); }
 		NodeInformation requesterNode = nodeConnectionRequest.getNodeRequester();
 		
-		System.out.println("Got messagingNode request from IP: " + requesterNode.getNodeIPAddress() + " Port: " + String.valueOf(requesterNode.getNodePortNumber()) + ".");
+		if (DEBUG) { System.out.println("Got messagingNode request from IP: " + requesterNode.getNodeIPAddress() + " on Port: " + String.valueOf(requesterNode.getNodePortNumber()) + "."); }
 		
-		// success, node is not currently connected to as one of our neighbors
-		if (!this.neighborNodes.contains(requesterNode)) {
-			this.neighborNodes.add(requesterNode);
-			System.out.println("MessagingNode request successful. The number of messaging nodes this node has as a neighbor is (" + this.neighborNodes.size() + ")");
-			this.sendNodeConnectionResponse(nodeConnectionRequest, (byte) 1);
-		} else {
-			this.sendNodeConnectionResponse(nodeConnectionRequest, (byte) 0);
-		}
-		System.out.println("end handleNodeConnectionRequest");
-	}
-	
-	private void sendNodeConnectionResponse(NodeConnectionRequest nodeConnectionRequest, byte status) {
-		System.out.println("begin sendNodeConnectionResponse");
 		try {
 			Socket socket = new Socket(nodeConnectionRequest.getNodeRequester().getNodeIPAddress(), nodeConnectionRequest.getNodeRequester().getNodePortNumber());
 			TCPSender sender = new TCPSender(socket);
 			
-			System.out.println("Sending to " + nodeConnectionRequest.getNodeRequester().getNodeIPAddress() + " on Port " + nodeConnectionRequest.getNodeRequester().getNodePortNumber());
+			if (DEBUG) { System.out.println("Sending to " + nodeConnectionRequest.getNodeRequester().getNodeIPAddress() + " on Port " + nodeConnectionRequest.getNodeRequester().getNodePortNumber()); }
 			
-			NodeConnectionResponse nodeConnectionResponse = new NodeConnectionResponse(status, new NodeInformation(this.localHostIPAddress, this.localHostPortNumber));
+			// sending status of 1 to indicate successful response
+			NodeConnectionResponse nodeConnectionResponse = new NodeConnectionResponse((byte) 1, new NodeInformation(this.localHostIPAddress, this.localHostPortNumber));
+			if (DEBUG) { System.out.println("MessagingNode about to send message type: " + nodeConnectionResponse.getType()); }
 			sender.sendData(nodeConnectionResponse.getBytes());
 			socket.close();
 		} catch (IOException ioe) {
 			ioe.printStackTrace();
 		}
-		System.out.println("end sendNodeConnectionResponse");
+		
+		// success, node is not currently connected to as one of our neighbors
+		//if (!this.neighborNodes.contains(requesterNode) && this.neighborNodes.size() < 4) {
+		
+		/**
+		synchronized (neighborNodes) {
+			if (!this.neighborNodes.contains(requesterNode)) {
+				this.neighborNodes.add(requesterNode);
+				System.out.println("MessagingNode request successful. The number of messaging nodes this node has as a neighbor is (" + this.neighborNodes.size() + ")");
+				this.sendNodeConnectionResponse(nodeConnectionRequest, (byte) 1);
+			} else {
+				if (this.neighborNodes.contains(requesterNode)) {
+					System.out.println("Requester Node " + requesterNode.getNodeIPAddress() + " is already connected to this Node.");
+				} else {
+					System.out.println("Connection error, no connection made.");
+				}
+				this.sendNodeConnectionResponse(nodeConnectionRequest, (byte) 0);
+			}
+		}
+		**/
+		if (DEBUG) { System.out.println("end MessagingNode handleNodeConnectionRequest"); }
 	}
 	
-	private void handleNodeConnectionResponse(Event event) {
-		System.out.println("begin handleNodeConnectionResponse");
+	// DANIEL: OLD METHOD, may be able to delete after successful testing
+	//private synchronized void sendNodeConnectionResponse(NodeConnectionRequest nodeConnectionRequest, byte status) {
+	/**
+	private void sendNodeConnectionResponse(NodeConnectionRequest nodeConnectionRequest, byte status) {
+		//System.out.println("begin MessagingNode sendNodeConnectionResponse");
+		try {
+			Socket socket = new Socket(nodeConnectionRequest.getNodeRequester().getNodeIPAddress(), nodeConnectionRequest.getNodeRequester().getNodePortNumber());
+			TCPSender sender = new TCPSender(socket);
+			
+			//System.out.println("Sending to " + nodeConnectionRequest.getNodeRequester().getNodeIPAddress() + " on Port " + nodeConnectionRequest.getNodeRequester().getNodePortNumber());
+			
+			NodeConnectionResponse nodeConnectionResponse = new NodeConnectionResponse(status, new NodeInformation(this.localHostIPAddress, this.localHostPortNumber));
+			//System.out.println("MessagingNode about to send message type: " + nodeConnectionResponse.getType());
+			sender.sendData(nodeConnectionResponse.getBytes());
+			socket.close();
+		} catch (IOException ioe) {
+			ioe.printStackTrace();
+		}
+		//System.out.println("end MessagingNode sendNodeConnectionResponse");
+	}
+	**/
+	
+	private synchronized void handleNodeConnectionResponse(Event event) {
+		if (DEBUG) { System.out.println("begin MessagingNode handleNodeConnectionResponse"); }
 		NodeConnectionResponse nodeConnectionResponse = (NodeConnectionResponse) event;
-		
+		if (DEBUG) { System.out.println("MessagingNode got a message type: " + nodeConnectionResponse.getType()); }
 		NodeInformation responderNode = nodeConnectionResponse.getNodeResponder();
 		
-		System.out.println("Got messagingNode request from IP: " + responderNode.getNodeIPAddress() + " Port: " + String.valueOf(responderNode.getNodePortNumber()) + ".");
+		if (DEBUG) { System.out.println("Got messagingNode request from IP: " + responderNode.getNodeIPAddress() + " on Port: " + String.valueOf(responderNode.getNodePortNumber()) + "."); }
 		
 		// successful connection
 		if (nodeConnectionResponse.getStatusCode() == (byte) 1) {
-			System.out.println("Connection Request Succeeded.");
-			this.neighborNodes.add(responderNode);
-		// unsuccessful connection
-		} else {
-			System.out.println("Connection Request Failed.");
+			// first node responding, initialize connectedNeighborNodes or face errors
+			if (this.connectedNeighborNodes == null) {
+				this.connectedNeighborNodes = new ArrayList<>();
+			}
+			// add to our connectedNeighborNodes the nodes that just responded
+			if (!this.connectedNeighborNodes.contains(responderNode)) {
+				this.connectedNeighborNodes.add(responderNode);
+				
+				// initialize a thread with the socket of the responderNode to make sending multiple messages much easier
+				try {
+					Socket neighborSocket = new Socket(responderNode.getNodeIPAddress(), responderNode.getNodePortNumber());
+					TCPSender sender = new TCPSender(neighborSocket);
+					TCPReceiverThread thread = new TCPReceiverThread(neighborSocket, this);
+					new Thread(thread).start();
+					this.messagingNodeSenders.put(responderNode, sender);
+				} catch (UnknownHostException e) {
+					e.printStackTrace();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
 		}
-		System.out.println("end handleNodeConnectionResponse");
+			
+		if (this.connectedNeighborNodes.size() == this.neighborNodes.size()) {
+			System.out.println("All connections are established.  Number of connections: " + this.connectedNeighborNodes.size());
+		} else {
+			System.out.println("Number of Connections made is currently: " + this.connectedNeighborNodes.size());
+		}
+		if (DEBUG) { System.out.println("end MessagingNode handleNodeConnectionResponse"); }
 	}
 
 	private void handleLinkWeights(Event event) {
-		System.out.println("begin handleLinkWeights");
+		if (DEBUG) { System.out.println("begin MessagingNode handleLinkWeights"); }
 		LinkWeights linkWeights = (LinkWeights) event;
+		if (DEBUG) { System.out.println("MessagingNode got a message type: " + linkWeights.getType()); }
 		
 		this.edgesList = linkWeights.getlinkWeightsEdges();
 		ArrayList<NodeInformation> nodes = new ArrayList<>();
-		
+
+		 if (DEBUG) { 
+			for (Edge e : this.edgesList) {
+				System.out.println("Edge: Source: " + e.getSourceNode().getNodeIPAddress() + " Dest: " + e.getDestationNode() + " Weight: " + e.getWeight());
+			}
+		}
+
 		for (Edge e : this.edgesList) {
-			// builds a list of NodeInformation for creating the overlay
+			// builds a list of NodeInformation Nodes for creating the overlay
 			if (!nodes.contains(e.getSourceNode())) {
 				nodes.add(e.getSourceNode());
 			}
-			
-			// adds to the of non-neighbor nodes that this node is connected to
-			if ((e.getSourceNode().getNodeIPAddress().equals(this.localHostIPAddress)) && (e.getSourceNode().getNodePortNumber() == this.localHostPortNumber) && (!this.nonNeighborNodes.contains(e.getSourceNode()))) {
-				nonNeighborNodes.add(e.getSourceNode());
-			}
 		}
 		
+		// create an overlay for this MessagingNode that it can use to build ShortestPaths
+		// does NOT create an overlay (that would require calling execute in the overlay) but instead creates an overlay by using the Edges that have been passed from the Registry
 		this.overlay = new OverlayCreator(nodes);
-		this.overlay.createOverlayFromEdges(edgesList);
-		System.out.println("end handleLinkWeights");
+		this.overlay.createOverlayFromEdges(this.edgesList);
+		
+		ArrayList<NodeInformation> otherNodes = new ArrayList<>();
+		
+		for (Edge e : this.edgesList) {
+			// adds to the list of non-neighbor nodes that this node is connected to
+			NodeInformation source = e.getSourceNode();
+			NodeInformation dest = e.getDestationNode();
+			
+			// don't have the source node logged
+			if (!this.neighborNodes.contains(source)) {
+				// not equal to this node
+				if ((!source.getNodeIPAddress().equals(this.localHostIPAddress) && source.getNodePortNumber() != this.localHostPortNumber)) {
+					// make sure we didn't add it already
+					if (!otherNodes.contains(source)) {
+						otherNodes.add(source);
+					}
+				}
+			// don't have the destination node logged
+			} else if ((!this.neighborNodes.contains(dest))) {
+				if ((!dest.getNodeIPAddress().equals(this.localHostIPAddress) && dest.getNodePortNumber() != this.localHostPortNumber)) {
+					if (!otherNodes.contains(dest)) {
+						otherNodes.add(dest);
+					}
+				}
+			}
+		}
+			
+		this.nonNeighborNodes = otherNodes;
+		
+		if (DEBUG) { System.out.println("end MessagingNode handleLinkWeights"); }
 	}
 
-	private void handleTaskInitiate(Event event) {
-		System.out.println("begin handleTaskInitiate");
+	private synchronized void handleTaskInitiate(Event event) {
+		if (DEBUG) { System.out.println("begin MessagingNode handleTaskInitiate"); }
 		TaskInitiate taskInitiate = (TaskInitiate) event;
+		if (DEBUG) { System.out.println("MessagingNode got a message type: " + taskInitiate.getType()); }
 		
 		int numberOfRounds = taskInitiate.getNumberOfRounds();
 		this.routingCache = new RoutingCache();
 		Random random = new Random();
 		
 		for (int i = 0; i < numberOfRounds; i++) {
+			// get a random Node to build the path that we need for each round
 			int randomNode = random.nextInt(this.nonNeighborNodes.size());
 			prepMessageToMessagingNode(this.nonNeighborNodes.get(randomNode));
 		}
-		System.out.println("end handleTaskInitiate");
+		
 		sendTaskComplete();
+		if (DEBUG) { System.out.println("end MessagingNode handleTaskInitiate"); }
 	}
 	
 	private void prepMessageToMessagingNode(NodeInformation node) {
-		ArrayList<NodeInformation> path;
+		if (DEBUG) { System.out.println("begin MessagingNode prepMessageToMessagingNode"); }
+		ArrayList<NodeInformation> path = new ArrayList<>();
 		Random random = new Random();
+		NodeInformation me = new NodeInformation(this.localHostIPAddress, this.localHostPortNumber);
 		
+		// already have the shortestPath to this MessagingNode, can grab the path from the cache
+		if (this.routingCache.isRoute(node)) {
+			path = routingCache.getPathFromRoutingCache(node);
+		// haven't visited this MessagingNode yet, need to construct the shortestPath to it and cache it when complete
+		} else {
+			ShortestPath shortestPath = new ShortestPath(this.overlay);
+			shortestPath.execute(me);
+			path = new ArrayList<>(shortestPath.getPath(node));
+			routingCache.addPath(node, path);
+			System.out.println("My path is (starting, to): ");
+			System.out.println(path);
+		}
+		
+		// DANIEL: while testing tomorrow, attempt using this format instead
+		/**
 		// destination node has not been routed yet
 		if (!this.routingCache.isRoute(node)) {
 			ShortestPath shortestPath = new ShortestPath(this.overlay);
-			shortestPath.execute(node);
+			shortestPath.execute(me);
 			path = new ArrayList<>(shortestPath.getPath(node));
-			this.routingCache.addPath(node, path);
+			routingCache.addPath(node, path);
+			System.out.println("My path is (starting, to): ");
+			System.out.println(path);
 		// destination node has already been routed before
 		} else {
 			path = this.routingCache.getPathFromRoutingCache(node);
 		}
+		**/
 		
-		// payload of each message is a random integer with values that range from 2147483647 to -2147483648
+		// payload of each message is a random integer with values that range from 2147483647 to -2147483648, same as all the values that an int can hold in java
 		int payload = random.nextInt();
-		Message message = new Message(new NodeInformation(this.localHostIPAddress, this.localHostPortNumber), node, payload, path);
+		Message message = new Message(me, node, payload, path);
+		if (DEBUG) { System.out.println("MessagingNode about to send message type: " + message.getType()); }
 		this.incrementSentCounter();
 		this.addSentSummation(payload);
-		
-		// send Message to the next node on the pathlist, 0 index = this node
+        
+		// send Message to the next node on the pathlist, 0 index = this node, so choose the next node in the array
 		sendMessageToMessagingNode(path.get(1), message);
+		
+		if (DEBUG) { System.out.println("end MessagingNode prepMessageToMessagingNode"); }
 	}
 	
-	private synchronized void sendMessageToMessagingNode(NodeInformation node, Message message) {
-		System.out.println("begin sendMessageToMessagingNode");
+	private void sendMessageToMessagingNode(NodeInformation node, Message message) {
+		if (DEBUG) { System.out.println("begin MessagingNode sendMessageToMessagingNode"); }
 		try {
-			Socket socket = new Socket(node.getNodeIPAddress(), node.getNodePortNumber());
-			TCPSender sender = new TCPSender(socket);
+			if (DEBUG) { System.out.println("Sending to " + node.getNodeIPAddress() + " on Port " + node.getNodePortNumber()); }
 			
-			if (DEBUG) {
-				System.out.println("Sending to " + node.getNodeIPAddress() + " on Port " + node.getNodePortNumber());
-			}
-			
-			sender.sendData(message.getBytes());
-			socket.close();
+			messagingNodeSenders.get(node).sendData(message.getBytes());
 		} catch (IOException ioe) {
 			ioe.printStackTrace();
 		}
-		System.out.println("end sendMessageToMessagingNode");
+		if (DEBUG) { System.out.println("end MessagingNode sendMessageToMessagingNode"); }
 	}
 	
 	private void sendTaskComplete() {
-		System.out.println("begin sendTaskComplete");
-		
+		if (DEBUG) { System.out.println("begin MessagingNode sendTaskComplete"); }
 		try {
-			System.out.println(String.format("Attempting to connect to registry at: %s:%d", this.registryHostName, this.registryHostPortNumber));
-			Socket registrySocket = new Socket(this.registryHostName, this.registryHostPortNumber);
-			TCPSender sender = new TCPSender(registrySocket);
+			if (DEBUG) { System.out.println(String.format("Attempting to send a message to the Registry at: %s:%d", this.registryHostName, this.registryHostPortNumber)); }
+
 			TaskComplete taskComplete = new TaskComplete(new NodeInformation(this.registryHostName, this.registryHostPortNumber));
 			
-			if (DEBUG) {
-				System.out.println("Sending to " + this.registryHostName + " on Port " + this.registryHostPortNumber);
-			}
+			if (DEBUG) { System.out.println("MessagingNode about to send message type: " + taskComplete.getType()); }
+			if (DEBUG) { System.out.println("Sending to " + this.registryHostName + " on Port " + this.registryHostPortNumber); }
 			
-			sender.sendData(taskComplete.getBytes());
-			registrySocket.close();
+			this.registrySender.sendData(taskComplete.getBytes());
 		} catch (IOException ioe) {
 			ioe.printStackTrace();
 		}
 		
-		System.out.println("end sendTaskComplete");
+		if (DEBUG) { System.out.println("end MessagingNode sendTaskComplete"); }
 	}
 
 	/**
@@ -483,36 +610,64 @@ public class MessagingNode implements Node {
 	 * Number of messages relayed (int)
 	 */
 	private void handleTaskSummaryRequest(Event event) {
+		if (DEBUG) { System.out.println("begin MessagingNode handleTaskSummaryRequest"); }
 		try {
-			System.out.println(String.format("Attempting to connect to registry at: %s:%d", this.registryHostName, this.registryHostPortNumber));
-			Socket registrySocket = new Socket(this.registryHostName, this.registryHostPortNumber);
-			TCPSender sender = new TCPSender(registrySocket);
+			if (DEBUG) { System.out.println(String.format("Attempting to connect to registry at: %s:%d", this.registryHostName, this.registryHostPortNumber)); }
 			TaskSummaryResponse taskSummaryReponse = new TaskSummaryResponse(this.localHostIPAddress, this.localHostPortNumber, this.sendTracker, this.sendSummation, this.receiveTracker, this.receiveSummation, this.relayTracker);
 			
-			if (DEBUG) {
-				System.out.println("Sending to " + this.registryHostName + " on Port " + this.registryHostPortNumber);
-			}
+			if (DEBUG) { System.out.println("MessagingNode about to send message type: " + taskSummaryReponse.getType()); }
+			if (DEBUG) { System.out.println("Sending to " + this.registryHostName + " on Port " + this.registryHostPortNumber); }
 			
-			sender.sendData(taskSummaryReponse.getBytes());
+			this.registrySender.sendData(taskSummaryReponse.getBytes());
+
+			// after the taskSummary has been sent to the Registry, reset all values
 			clearSentCounter();
 			clearReceivedCounter();
 			clearRelayCounter();
 			clearReceivedSummation();
 			clearSendSummation();
-			registrySocket.close();
 		} catch (IOException ioe) {
 			ioe.printStackTrace();
 		}
+		if (DEBUG) { System.out.println("end MessagingNode handleTaskSummaryRequest"); }
 	}
 
 	private void handleMessage(Event event) {
-		System.out.println("begin handleMessage");
+		if (DEBUG) { System.out.println("begin MessagingNode handleMessage"); }
 		Message message = (Message) event;
+		if (DEBUG) { System.out.println("Got a Message from " + message.getSourceNode().getNodeIPAddress()); }
 		
 		ArrayList<NodeInformation> routePath = message.getRoutePath();
 		
+        NodeInformation me = new NodeInformation(this.localHostIPAddress, this.localHostPortNumber);
+        
+        if (message.getDestinationNode().equals(me)) {
+            this.incrementReceivedCounter();
+            this.addReceiveSummation(message.getPayload());
+            return;
+        }
+        
+        // Find the next node in the routing path
+        ListIterator<NodeInformation> node = routePath.listIterator();
+        NodeInformation nextNode = null;
+        while (node.hasNext()) {
+        	NodeInformation current = node.next();
+            if (current.equals(me))
+            {
+                nextNode = node.next();
+                System.out.println("Message received, routing to " + nextNode);
+                break;
+            }
+        }
+        if (nextNode != null) {
+            this.incrementRelayCounter();
+            this.sendMessageToMessagingNode(nextNode, message);
+        }
+        
+     // DANIEL: while testing tomorrow, attempt using this format instead
 		// end of the list, this node is the destination for the route path
-		if ((message.getDestinationNode().getNodeIPAddress().equals(this.localHostIPAddress)) && (message.getDestinationNode().getNodePortNumber() == this.registryHostPortNumber)) {
+        /**
+		if (message.getDestinationNode().getNodeIPAddress().equals(me)) {
 			this.incrementReceivedCounter();
 			this.addReceiveSummation(message.getPayload());
 		// this node is not the end, need to find the next node on the route path
@@ -520,9 +675,16 @@ public class MessagingNode implements Node {
 			NodeInformation nextNode = null;
 			for (int i=0; i < routePath.size(); i++) {
 				nextNode = routePath.get(i);
-				if ((nextNode.getNodeIPAddress().equals(this.localHostIPAddress)) && (nextNode.getNodePortNumber() == this.localHostPortNumber)) {
-					nextNode = routePath.get(i + 1);
-					break;
+				if (DEBUG) { System.out.println("Checking to send the next message to: " + nextNode.getNodeIPAddress()); }
+				if (nextNode.equals(me) {
+					if ((i + 1) >= routePath.size()) {
+						System.out.println("Out of bounds for Route Path.");
+						nextNode = null;
+						break;
+					} else {
+						nextNode = routePath.get(i + 1);
+						break;
+					}
 				}
 			}
 			
@@ -531,11 +693,46 @@ public class MessagingNode implements Node {
 				this.sendMessageToMessagingNode(nextNode, message);
 			}
 		}
-		System.out.println("end handleMessage");
+		**/
+		if (DEBUG) { System.out.println("end MessagingNode handleMessage"); }
+	}
+	
+	private void printShortestPath() {
+		System.out.println("Coming soon");
+	}
+	
+	private void printNodes() {
+		System.out.println("The total number of neighborNodes is a total of " + this.neighborNodes.size() + " nodes.");
+		if (!this.neighborNodes.isEmpty()) {
+			for (NodeInformation ni : this.neighborNodes) {
+				System.out.println("The nodes in neighborNodes is: " + ni.getNodeIPAddress());
+			}
+		}
+		
+		System.out.println("The nodes that are in otherNodes contains " + this.nonNeighborNodes.size() + " nodes.");
+		if (!this.nonNeighborNodes.isEmpty()) {
+			for (NodeInformation ni : this.nonNeighborNodes) {
+				System.out.println("The Nodes in nonNeighborNodes: " + ni.getNodeIPAddress());
+			}
+		}
+		
+		if (!this.edgesList.isEmpty()) {
+			System.out.println("Edges associated with me are: ");
+			for (Edge e : this.edgesList) {
+				System.out.println("Edge Source: " + e.getSourceNode().getNodeIPAddress() + " Edge Destination: " + e.getDestationNode().getNodeIPAddress() + " with Weight: " + e.getWeight());
+			}
+		}
+		
+		System.out.println("The total number of nodes I'm Connected to is a total of " + this.connectedNeighborNodes.size() + " nodes.");
+		if (!this.connectedNeighborNodes.isEmpty()) {
+			for (NodeInformation ni : this.connectedNeighborNodes) {
+				System.out.println("The nodes in connectedNeighborNodes is: " + ni.getNodeIPAddress());
+			}
+		}
 	}
 	
 	/**
-     * Create this as synchronized so that two threads can't update the counter simultaneously.
+     * Create this as synchronized so that two threads can't update any counter simultaneously.
      */
     private synchronized void incrementSentCounter() {
         this.sendTracker++;

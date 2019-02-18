@@ -47,8 +47,10 @@ public class NodeConnectionResponse implements Event {
 			return;
 		}
 		
+		// statusCode
 		this.statusCode = din.readByte();
 		
+		// NodeInformation
 		int nodeInformationLength = din.readInt();
 		byte[] nodeInformationBytes = new byte[nodeInformationLength];
 		din.readFully(nodeInformationBytes);
@@ -73,8 +75,10 @@ public class NodeConnectionResponse implements Event {
 		DataOutputStream dout = new DataOutputStream(new BufferedOutputStream(baOutputStream));
 		dout.writeInt(this.type);
 		
+		// statusCode
 		dout.writeByte(this.statusCode);
 		
+		// NodeInformation
 		byte[] nodeInformationBytes = this.nodeResponder.getBytes();
 		int nodeInformationLength = nodeInformationBytes.length;
 		dout.writeInt(nodeInformationLength);

@@ -42,7 +42,7 @@ public class Edge {
 		int destNodeInfoLength = din.readInt();
 		byte[] destNodeInfoBytes = new byte[destNodeInfoLength];
 		din.readFully(destNodeInfoBytes);
-		this.sourceNode = new NodeInformation(destNodeInfoBytes);
+		this.destationNode = new NodeInformation(destNodeInfoBytes);
 		
 		//weight
 		int edgeWeight = din.readInt();
@@ -64,7 +64,7 @@ public class Edge {
 		dout.write(sourceNodeInfoBytes);
 		
 		// destinationeNode
-		byte[] destinationNodeInfoBytes = sourceNode.getBytes();
+		byte[] destinationNodeInfoBytes = destationNode.getBytes();
 		int destinationNodeInfoLength = destinationNodeInfoBytes.length;
 		dout.writeInt(destinationNodeInfoLength);
 		dout.write(destinationNodeInfoBytes);

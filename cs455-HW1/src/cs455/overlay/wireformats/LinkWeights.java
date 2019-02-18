@@ -15,13 +15,12 @@ import cs455.overlay.dijkstra.Edge;
  * A single message should be constructed with all link weights and sent to all registered messaging nodes.
  * A messaging node should process this message and store its information to generate routing paths for messages.
  * Message Type (int): LINK_WEIGHTS (6005)
- * Number of links (int): L
+ * Number of links (int)
  * Linkinfo1 (ArrayList<Edge>)
  * Linkinfo2
  * ...
  * LinkinfoL
  */
-
 
 public class LinkWeights implements Event {
 
@@ -52,10 +51,13 @@ public class LinkWeights implements Event {
 			return;
 		}
 		
+		// numberOfLinks
 		int numberOfLinks = din.readInt();
 		this.numberOfLinks = numberOfLinks;
 		
-		this.linkWeightsEdges = new ArrayList<>(this.linkWeightsEdges);
+		// linkWeightsEdges
+		// declare as a size of the numberOfLinks that we have been passed
+		this.linkWeightsEdges = new ArrayList<>(this.numberOfLinks);
 		
 		for (int i=0; i < this.numberOfLinks; i++) {
 			int edgeLength = din.readInt();
@@ -84,8 +86,10 @@ public class LinkWeights implements Event {
 		DataOutputStream dout = new DataOutputStream(new BufferedOutputStream(baOutputStream));
 		dout.writeInt(this.type);
 		
+		// numberOfLinks
 		dout.writeInt(this.numberOfLinks);
 		
+		// linkWeightsEdges
 		for (Edge e : this.linkWeightsEdges) {
 			byte[] edgeBytes = e.getBytes();
 			int edgeLength = edgeBytes.length;

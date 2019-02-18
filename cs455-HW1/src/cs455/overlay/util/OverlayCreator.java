@@ -25,14 +25,15 @@ public class OverlayCreator {
 	public void createOverlay(int numberOfConnections) {
 		Random random = new Random();
 		
-		// connect adjacent nodes in a circular fashion, ensures no partitions
+		// connect adjacent nodes in a circular fashion, ensures no partitions in overlay
+		// Assign and publish weights to the links connecting any two messaging nodes in the overlay. The weights these links take will range from 1-10.
 		for (int i=0; i < this.nodesList.size(); i++) {
 			this.edgesList.add(new Edge(this.nodesList.get(i % nodesList.size()), this.nodesList.get((i + 1) % nodesList.size()), random.nextInt(10) + 1));
 			this.nodesList.get(i % nodesList.size()).addConnection();
 			this.nodesList.get((i + 1) % nodesList.size()).addConnection();
 		}
 		
-		// get some randomnization in to make the overlay a little more dynamic
+		// use some randomnization to make the overlay a little more dynamic
 		Collections.shuffle(this.nodesList);
 		
 		// link the rest of the nodes to the number of connections they are required to have
@@ -41,7 +42,7 @@ public class OverlayCreator {
 			
 			// get another node to attempt a connection to
 			for (int i=0; i < this.nodesList.size(); i++) {
-				// exceeded connections, move to next node
+				// node exceeded connections, move to next node
 				if (n.getNumberOfConnections() >= (numberOfConnections)) {
 					break;
 				} else {
@@ -60,6 +61,7 @@ public class OverlayCreator {
 						}
 						
 						if (addNode) {
+							// set a random weight between 1-10 to the Edge
 							this.edgesList.add(new Edge(n, nodeToConnect, random.nextInt(10) + 1));
 							n.addConnection();
 							nodeToConnect.addConnection();
@@ -70,7 +72,7 @@ public class OverlayCreator {
 		}
 	}
 	
-	// messagingNodes can reconstruct the overlay using only a list of Edges
+	// messagingNodes need to reconstruct the overlay using only a list of Edges
 	public void createOverlayFromEdges(ArrayList<Edge> edgesList) {
 		for (Edge e : edgesList) {
 			this.edgesList.add(new Edge(e.getSourceNode(), e.getDestationNode(), e.getWeight()));

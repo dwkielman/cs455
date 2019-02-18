@@ -13,8 +13,7 @@ import cs455.overlay.node.NodeInformation;
 /**
  * Used for MessagingNodes requesting to connect to other MessagingNodes
  * Message Type (int): NODE_CONNECTION_REQUEST (6011)
- * IP address (String)
- * Port number (int)
+ * Requester (NodeInformation)
  */
 public class NodeConnectionRequest implements Event {
 	
@@ -43,6 +42,7 @@ public class NodeConnectionRequest implements Event {
 			return;
 		}
 		
+		// NodeInformation
 		int nodeInformationLength = din.readInt();
 		byte[] nodeInformationBytes = new byte[nodeInformationLength];
 		din.readFully(nodeInformationBytes);
@@ -69,6 +69,7 @@ public class NodeConnectionRequest implements Event {
 		DataOutputStream dout = new DataOutputStream(new BufferedOutputStream(baOutputStream));
 		dout.writeInt(this.type);
 		
+		// NodeInformation
 		byte[] nodeInformationBytes = this.nodeRequester.getBytes();
 		int nodeInformationLength = nodeInformationBytes.length;
 		dout.writeInt(nodeInformationLength);

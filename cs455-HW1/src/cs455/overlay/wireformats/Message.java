@@ -13,8 +13,8 @@ import cs455.overlay.dijkstra.RoutingCache;
 import cs455.overlay.node.NodeInformation;
 
 /**
- * Data can be fed into the network from any messaging node within the network. Packets are sent from a source to a sink.
- * A message includes a payload which is a random integer.
+ * Data can be fed into the network from any MessagingNode within the overlay. Information is sent from a source node to a destination node
+ * A message includes a payload which is a random integer and the route path between the source node and the destination node
  * Message Type (int): MESSAGE (6010)
  * Source IP address and Port (NodeInformation)
  * Destination IP address and Port (NodeInformation)
@@ -53,26 +53,30 @@ public class Message implements Event {
 		int type = din.readInt();
 		
 		if (type != Protocol.MESSAGE) {
-			System.out.println("Invalid Message Type for RegisterRequest");
+			System.out.println("Invalid Message Type for Message");
 			return;
 		}
 		
+		// source NodeInformation
 		int sourceNILength = din.readInt();
 		byte[] sourceNIBytes = new byte[sourceNILength];
 		din.readFully(sourceNIBytes);
 		
 		this.sourceNode = new NodeInformation(sourceNIBytes);
 		
+		// destiantion NodeInformation
 		int destNILength = din.readInt();
 		byte[] destNIBytes = new byte[destNILength];
 		din.readFully(destNIBytes);
 		
 		this.destinationNode = new NodeInformation(destNIBytes);
 		
+		// payload
 		int payload = din.readInt();
 
 		this.payload = payload;
 		
+		// routePath
 		int routePathLength = din.readInt();
 		
 		this.routePath = new ArrayList<>(routePathLength);
@@ -100,17 +104,23 @@ public class Message implements Event {
 		DataOutputStream dout = new DataOutputStream(new BufferedOutputStream(baOutputStream));
 		dout.writeInt(this.type);
 		
+		// source NodeInformation
 		byte[] sourceNIBytes = this.sourceNode.getBytes();
 		int sourceNILength = sourceNIBytes.length;
 		dout.writeInt(sourceNILength);
 		dout.write(sourceNIBytes);
 		
+		// destiantion NodeInformation
 		byte[] destNIBytes = this.destinationNode.getBytes();
 		int destNILength = destNIBytes.length;
 		dout.writeInt(destNILength);
 		dout.write(destNIBytes);
 		
+		// payload
 		dout.writeInt(this.payload);
+		
+		// routePath
+		dout.writeInt(routePath.size());
 		
 		for (NodeInformation ni : routePath) {
 			byte[] routeNIBytes = ni.getBytes();

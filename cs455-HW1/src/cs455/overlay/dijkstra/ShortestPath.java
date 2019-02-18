@@ -103,7 +103,7 @@ public class ShortestPath {
 		return neighborNodes;
 	}
 	
-	public LinkedList<NodeInformation> getPath(NodeInformation dest) {
+	public ArrayList<NodeInformation> getPath(NodeInformation dest) {
 		LinkedList<NodeInformation> nodePath = new LinkedList<>();
 		NodeInformation hop = dest;
 		if (this.predecessors.get(hop) == null) {
@@ -115,9 +115,13 @@ public class ShortestPath {
 			nodePath.add(hop);
 			
 		}
-		// bi-directional, but need to return the path TO the node
+		// bi-directional, but need to return the path TO the destination node
 		Collections.reverse(nodePath);
-		return nodePath;
+		ArrayList<NodeInformation> returnPath = new ArrayList<>();
+		for (NodeInformation ni : nodePath) {
+			returnPath.add(ni);
+		}
+		return returnPath;
 	}
 	
 	public static void main(String args[]) {
@@ -158,15 +162,15 @@ public class ShortestPath {
 	        System.out.println(sp.getPath(nodeList.get(5)));
 	        //System.out.println(sp.getPath(nodeList.get(7)));
 	        
-	        ArrayList<NodeInformation> neighborNodes = myOC.getNeighborNodes(nodeList.get(0));
+	       // ArrayList<NodeInformation> neighborNodes = myOC.getNeighborNodes(nodeList.get(0));
 	        
-	        for (NodeInformation ni : neighborNodes) {
-	        	System.out.println("Neighbor Node: " + ni.getNodePortNumber());
-	        }
+	        //for (NodeInformation ni : neighborNodes) {
+	        	//System.out.println("Neighbor Node: " + ni.getNodePortNumber());
+	        //}
 	        
 		}
 	}
-	
+
 	private void printConnections( ) {
 		for (NodeInformation n : this.nodesList) {
 			System.out.println(n + "-" + this.overlay.getConnectionCount(n));

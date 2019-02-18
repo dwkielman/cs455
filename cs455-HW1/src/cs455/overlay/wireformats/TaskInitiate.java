@@ -40,6 +40,7 @@ public class TaskInitiate implements Event {
 			return;
 		}
 		
+		// numberOfRounds
 		int numberOfRounds = din.readInt();
 
 		this.numberOfRounds = numberOfRounds;
@@ -60,6 +61,7 @@ public class TaskInitiate implements Event {
 		DataOutputStream dout = new DataOutputStream(new BufferedOutputStream(baOutputStream));
 		dout.writeInt(this.type);
 		
+		// numberOfRounds
 		dout.writeInt(this.numberOfRounds);
 		
 		dout.flush();

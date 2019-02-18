@@ -28,8 +28,7 @@ public class TaskComplete implements Event {
 	/**
 	 * byte[] construction is as follows:
 	 * type
-	 * IPAddress
-	 * portNumber
+	 * nodeInformation
 	 * @throws IOException 
 	 */
 	public TaskComplete(byte[] marshalledBytes) throws IOException {
@@ -43,9 +42,11 @@ public class TaskComplete implements Event {
 			return;
 		}
 		
+		// nodeInformation
 		int nodeInfoLength = din.readInt();
 		byte[] nodeInfoBytes = new byte[nodeInfoLength];
 		din.readFully(nodeInfoBytes);
+		
 		
 		this.nodeInformation = new NodeInformation(nodeInfoBytes);
 		
@@ -65,6 +66,7 @@ public class TaskComplete implements Event {
 		DataOutputStream dout = new DataOutputStream(new BufferedOutputStream(baOutputStream));
 		dout.writeInt(this.type);
 		
+		// nodeInformation
 		byte[] nodeInfoBytes = this.nodeInformation.getBytes();
 		int nodeInfoLength = nodeInfoBytes.length;
 		dout.writeInt(nodeInfoLength);

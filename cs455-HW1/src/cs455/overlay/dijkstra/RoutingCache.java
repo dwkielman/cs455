@@ -41,4 +41,19 @@ public class RoutingCache {
 		}
 	}
 	
+	/**
+	public String getShortestRoutes() {
+		String shortestRoutes = "";
+		
+		for (NodeInformation ni : this.routes.keySet()) {
+			System.out.println("Shortest Route to Node " + ni.getNodeIPAddress());
+			ArrayList<NodeInformation> nodeRoutes = this.routes.get(ni);
+			for (NodeInformation nodeInfo : nodeRoutes) {
+				shortestRoutes += 
+			}
+		}
+		
+		return shortestRoutes;
+	}
+	**/
 }

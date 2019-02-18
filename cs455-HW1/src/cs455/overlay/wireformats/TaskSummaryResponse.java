@@ -31,8 +31,6 @@ public class TaskSummaryResponse implements Event {
 	private long sumReceivedMessages;
 	private int numberOfMessagesRelayed;
 	
-	
-	
 	public TaskSummaryResponse(String iPAddress, int portNumber, int numberOfMessagesSent, long sumSentMessages, int numberOfMessagesReceived, long sumReceivedMessages, int numberOfMessagesRelayed) {
 		this.IPAddress = iPAddress;
 		this.portNumber = portNumber;
@@ -66,32 +64,39 @@ public class TaskSummaryResponse implements Event {
 			return;
 		}
 		
+		// IPAddress
 		int IPAddressLength = din.readInt();
 		byte[] IPAddressBytes = new byte[IPAddressLength];
 		din.readFully(IPAddressBytes);
 		
 		this.IPAddress = new String(IPAddressBytes);
 		
+		// portNumber
 		int portNumber = din.readInt();
 
 		this.portNumber = portNumber;
 		
+		// numberOfMessagesSent
 		int numberOfMessagesSent = din.readInt();
 		
 		this.numberOfMessagesSent = numberOfMessagesSent;
 		
+		// sumSentMessages
 		long sumSentMessages = din.readLong();
 		
 		this.sumSentMessages = sumSentMessages;
 		
+		// numberOfMessagesReceived
 		int numberOfMessagesReceived = din.readInt();
 		
 		this.numberOfMessagesReceived = numberOfMessagesReceived;
 		
+		// sumReceivedMessages
 		long sumReceivedMessages = din.readLong();
 		
 		this.sumReceivedMessages = sumReceivedMessages;
 		
+		// numberOfMessagesRelayed
 		int numberOfMessagesRelayed = din.readInt();
 		
 		this.numberOfMessagesRelayed = numberOfMessagesRelayed;
@@ -112,16 +117,23 @@ public class TaskSummaryResponse implements Event {
 		DataOutputStream dout = new DataOutputStream(new BufferedOutputStream(baOutputStream));
 		dout.writeInt(this.type);
 		
+		// // IPAddress
 		byte[] IPAddressBytes = this.IPAddress.getBytes();
 		int IPAddressLength = IPAddressBytes.length;
 		dout.writeInt(IPAddressLength);
 		dout.write(IPAddressBytes);
 		
+		// portNumber
 		dout.writeInt(this.portNumber);
+		// numberOfMessagesSent
 		dout.writeInt(this.numberOfMessagesSent);
+		// sumSentMessages
 		dout.writeLong(this.sumSentMessages);
+		// numberOfMessagesReceived
 		dout.writeInt(this.numberOfMessagesReceived);
+		// sumReceivedMessages
 		dout.writeLong(this.sumReceivedMessages);
+		// numberOfMessagesRelayed
 		dout.writeInt(this.numberOfMessagesRelayed);
 		
 		dout.flush();
