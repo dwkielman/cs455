@@ -11,7 +11,8 @@ import java.io.IOException;
 import cs455.overlay.node.NodeInformation;
 
 /**
- * Used for MessagingNodes requesting to connect to other MessagingNodes
+ * MessagingNodes await instructions from the registry regarding the other messaging nodes that they must establish connections to.
+ * This Protocol is used for when a MessagingNode send a request to connect to another MessagingNode
  * Message Type (int): NODE_CONNECTION_REQUEST (6011)
  * Requester (NodeInformation)
  */
@@ -31,7 +32,6 @@ public class NodeConnectionRequest implements Event {
 	 * @throws IOException 
 	 */
 	public NodeConnectionRequest(byte[] marshalledBytes) throws IOException {
-		System.out.println("Begin NodeConnectionRequest Sending of Event");
 		ByteArrayInputStream baInputStream = new ByteArrayInputStream(marshalledBytes);
 		DataInputStream din = new DataInputStream(new BufferedInputStream(baInputStream));
 		
@@ -50,7 +50,6 @@ public class NodeConnectionRequest implements Event {
 		
 		baInputStream.close();
 		din.close();
-		System.out.println("End NodeConnectionRequest Sending of Event");
 	}
 
 	@Override

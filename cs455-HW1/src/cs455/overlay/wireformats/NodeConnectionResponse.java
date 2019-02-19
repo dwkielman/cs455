@@ -11,7 +11,7 @@ import java.io.IOException;
 import cs455.overlay.node.NodeInformation;
 
 /**
- * Used for MessagingNodes to respond to connecting to other MessagingNodes
+ * Used for MessagingNodes to respond to a request to connect to another MessagingNode
  * Message Type (int): NODE_CONNECTION_RESPONSE (6012)
  * Status Code (byte): SUCCESS or FAILURE
  * Additional Info (String):
@@ -36,7 +36,6 @@ public class NodeConnectionResponse implements Event {
 	 * @throws IOException 
 	 */
 	public NodeConnectionResponse(byte[] marshalledBytes) throws IOException {
-		System.out.println("Begin NodeConnectionResponse Sending of Event");
 		ByteArrayInputStream baInputStream = new ByteArrayInputStream(marshalledBytes);
 		DataInputStream din = new DataInputStream(new BufferedInputStream(baInputStream));
 		
@@ -58,7 +57,6 @@ public class NodeConnectionResponse implements Event {
 		
 		baInputStream.close();
 		din.close();
-		System.out.println("End NodeConnectionResponse Sending of Event");
 	}
 	
 	

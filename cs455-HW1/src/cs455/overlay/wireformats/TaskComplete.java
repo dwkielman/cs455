@@ -11,7 +11,7 @@ import java.io.IOException;
 import cs455.overlay.node.NodeInformation;
 
 /**
- * Once a node has completed its task of sending a certain number of messages in rounds, it informs the registry of its task completion.
+ * Once a MessagingNode has completed its task of sending a certain number of messages in rounds, it informs the registry of its task completion.
  * Message Type: TASK_COMPLETE (6007)
  * Destination IP address and Port (NodeInformation)
  */

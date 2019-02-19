@@ -12,7 +12,7 @@ import java.util.ArrayList;
 import cs455.overlay.dijkstra.Edge;
 
 /**
- * A single message should be constructed with all link weights and sent to all registered messaging nodes.
+ * This Protocol is constructed with all link weights for a given receiving MessagingNode and sent to all registered MessagingNodes.
  * A messaging node should process this message and store its information to generate routing paths for messages.
  * Message Type (int): LINK_WEIGHTS (6005)
  * Number of links (int)

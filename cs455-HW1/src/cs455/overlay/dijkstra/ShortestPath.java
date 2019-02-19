@@ -13,41 +13,42 @@ import cs455.overlay.node.NodeInformation;
 import cs455.overlay.util.OverlayCreator;
 
 /**
- * Used to determine the shortest path through a weighted node graph using Dijkstra's Algorithm
+ * Used to determine the shortest path through a weighted node graph using Dijkstra's Algorithm.
+ * A source for how this was constructed can be found at:
+ * https://medium.com/@ssaurel/calculate-shortest-paths-in-java-by-implementing-dijkstras-algorithm-5c1db06b6541
  */
 
 public class ShortestPath {
 
-	private final static boolean DEBUG = true;
 	private OverlayCreator overlay;
 	private ArrayList<NodeInformation> nodesList;
 	private ArrayList<Edge> edgeList;
-	private Set<NodeInformation> settledNodes;
-	private Set<NodeInformation> unsettledNodes;
+	private Set<NodeInformation> visitedNodes;
+	private Set<NodeInformation> unvisitedNodes;
 	private Map<NodeInformation, NodeInformation> predecessors;
 	private Map<NodeInformation, Integer> distance;
 	
+	// ShortestPath needs an Overlay of the Graph layout to determine a given ShortestPath
 	public ShortestPath(OverlayCreator overlay) {
 		this.overlay = overlay;
 		this.nodesList = new ArrayList<NodeInformation>(overlay.getNodesList());
 		this.edgeList = new ArrayList<Edge>(overlay.getEdgesList());
 	}
 	
-	/**
-	 * Calculate the shortest path
-	 */
-	public void execute(NodeInformation start) {
-		settledNodes = new HashSet<>();
-		unsettledNodes = new HashSet<>();
+	// Calculate the shortest path for a given start MessagingNode
+	public void execute(NodeInformation startNode) {
+		visitedNodes = new HashSet<>();
+		unvisitedNodes = new HashSet<>();
 		distance = new HashMap<>();
 		predecessors = new HashMap<>();
-		distance.put(start, 0);
-		unsettledNodes.add(start);
+		distance.put(startNode, 0);
+		unvisitedNodes.add(startNode);
 		
-		while (unsettledNodes.size() >0) {
-			NodeInformation node = getMin(unsettledNodes);
-			settledNodes.add(node);
-			unsettledNodes.remove(node);
+		// start cycling through all the nodes that need to be visited to calculate a given distance
+		while (unvisitedNodes.size() > 0) {
+			NodeInformation node = getMin(unvisitedNodes);
+			visitedNodes.add(node);
+			unvisitedNodes.remove(node);
 			findMinDistance(node);
 		}
 	}
@@ -58,11 +59,12 @@ public class ShortestPath {
 			if (getShortestPath(target) > getShortestPath(node) + getDistance(node, target)) {
 				distance.put(target, getShortestPath(node) + getDistance(node, target));
 				predecessors.put(target, node);
-				unsettledNodes.add(target);
+				unvisitedNodes.add(target);
 			}
 		}
 	}
 	
+	// get the weighted distance between two MessagingNodes by finding them on the list of Edges
 	private int getDistance(NodeInformation startNode, NodeInformation destNode) {
 		for (Edge e : this.edgeList) {
 			if (e.getSourceNode().equals(startNode) && e.getDestationNode().equals(destNode)) {
@@ -71,8 +73,9 @@ public class ShortestPath {
 		} throw new RuntimeException();
 	}
 	
-	private int getShortestPath(NodeInformation dest) {
-		Integer pathNumber = distance.get(dest);
+	// get the given weight to a passed destination MessagingNode
+	private int getShortestPath(NodeInformation destinationNode) {
+		Integer pathNumber = distance.get(destinationNode);
 		if (pathNumber == null) {
 			return Integer.MAX_VALUE;
 		} else {
@@ -80,6 +83,7 @@ public class ShortestPath {
 		}
 	}
 	
+	// find the shortest-weighted path to the next node on the list
 	private NodeInformation getMin(Set<NodeInformation> nodes) {
 		NodeInformation min = null;
 		
@@ -93,19 +97,21 @@ public class ShortestPath {
 		return min;
 	}
 	
+	// returns a List of all of the neighbors that are connected to a given MessagingNode
 	private List<NodeInformation> getNeighborNodes(NodeInformation node) {
 		List<NodeInformation> neighborNodes = new ArrayList<>();
 		for (Edge e : this.edgeList) {
-			if (e.getSourceNode().equals(node) && (!this.settledNodes.contains(e.getDestationNode()))) {
+			if (e.getSourceNode().equals(node) && (!this.visitedNodes.contains(e.getDestationNode()))) {
 				neighborNodes.add(e.getDestationNode());
 			}
 		}
 		return neighborNodes;
 	}
 	
-	public ArrayList<NodeInformation> getPath(NodeInformation dest) {
+	// returns an ArrayList of the path to a given passed MessagingNode after the source node has been executed
+	public ArrayList<NodeInformation> getPath(NodeInformation destinationNode) {
 		LinkedList<NodeInformation> nodePath = new LinkedList<>();
-		NodeInformation hop = dest;
+		NodeInformation hop = destinationNode;
 		if (this.predecessors.get(hop) == null) {
 			return null;
 		}
@@ -115,7 +121,7 @@ public class ShortestPath {
 			nodePath.add(hop);
 			
 		}
-		// bi-directional, but need to return the path TO the destination node
+		// Nodes send messages bi-directional, but this is the source node going TO the destination so need to reverse the path that was just constructed
 		Collections.reverse(nodePath);
 		ArrayList<NodeInformation> returnPath = new ArrayList<>();
 		for (NodeInformation ni : nodePath) {
@@ -124,57 +130,9 @@ public class ShortestPath {
 		return returnPath;
 	}
 	
-	public static void main(String args[]) {
-		if (DEBUG) {
-			ArrayList<NodeInformation> nodeList = new ArrayList<>();
-			nodeList.add(new NodeInformation("127.0.0.1", 9000));
-	        nodeList.add(new NodeInformation("127.0.0.1", 9001));
-	        nodeList.add(new NodeInformation("127.0.0.1", 9002));
-	        nodeList.add(new NodeInformation("127.0.0.1", 9003));
-	        nodeList.add(new NodeInformation("127.0.0.1", 9004));
-	        nodeList.add(new NodeInformation("127.0.0.1", 9005));
-	        nodeList.add(new NodeInformation("127.0.0.1", 9006));
-	        nodeList.add(new NodeInformation("127.0.0.1", 9007));
-	        nodeList.add(new NodeInformation("127.0.0.1", 9008));
-	        nodeList.add(new NodeInformation("127.0.0.1", 9009));
-	        
-	        OverlayCreator myOC = new OverlayCreator(nodeList);
-	        myOC.createOverlay(4);
-	        
-	        System.out.println("Testing Begin");
-	        ArrayList<Edge> edgeListTesting = myOC.getEdgesList();
-	        
-	        
-	        for (Edge e : edgeListTesting) {
-	        	System.out.println("Source: " + e.getSourceNode());
-	        	System.out.println("Destination: " + e.getDestationNode());
-	        	System.out.println("Weight: " + e.getWeight());
-	        	System.out.println();
-	        	System.out.println("Source Num of C: " + e.getSourceNode().getNumberOfConnections());
-	        }
-	        
-	        
-	        ShortestPath sp = new ShortestPath(myOC);
-	        sp.printConnections();
-	        sp.execute(nodeList.get(0));
-	        System.out.println("Starting at: " + nodeList.get(0).getNodePortNumber());
-	        System.out.println("Going to: " + nodeList.get(5).getNodePortNumber());
-	        System.out.println(sp.getPath(nodeList.get(5)));
-	        //System.out.println(sp.getPath(nodeList.get(7)));
-	        
-	       // ArrayList<NodeInformation> neighborNodes = myOC.getNeighborNodes(nodeList.get(0));
-	        
-	        //for (NodeInformation ni : neighborNodes) {
-	        	//System.out.println("Neighbor Node: " + ni.getNodePortNumber());
-	        //}
-	        
-		}
-	}
-
-	private void printConnections( ) {
-		for (NodeInformation n : this.nodesList) {
-			System.out.println(n + "-" + this.overlay.getConnectionCount(n));
-		}
+	// used for printing the shortestPath weight for messagingNodes, shell for calling the private method here
+	public int getWeightBetweenNodes(NodeInformation startNode, NodeInformation destinationNode) {
+		return getDistance(startNode, destinationNode);
 	}
 	
 }

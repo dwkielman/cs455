@@ -9,7 +9,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
- * When a messaging node exits it should deregister itself it does so by sending a message to the registry
+ * When a MessagingNode exits it should deregister itself it does so by sending a message to the registry
  * Message Type (int): DEREGISTER_REQUEST (6002)
  * Node IP address (String)
  * Node Port number (int)

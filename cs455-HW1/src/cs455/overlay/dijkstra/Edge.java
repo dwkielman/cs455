@@ -11,8 +11,7 @@ import java.io.IOException;
 import cs455.overlay.node.NodeInformation;
 
 /**
- * Edge consists of two nodes and the weight between them. Used in
- * Dijkstra's Algorithm, and also sent to MessagingNodes during the
+ * Edge consists of two nodes and the weight between them. Used in Dijkstra's Algorithm, and also sent to MessagingNodes during the
  * startup process. A list of edges can be used to reconstruct an Overlay.
  */
 

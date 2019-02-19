@@ -22,12 +22,11 @@ public class EventFactory {
 		return eventFactory;
 	}
 	
-	public synchronized void createEvent(byte[] marshalledBytes, Node node) {
+	public synchronized Event createEvent(byte[] marshalledBytes, Node node) {
 		ByteArrayInputStream baInputStream = new ByteArrayInputStream(marshalledBytes);
 		DataInputStream din = new DataInputStream(new BufferedInputStream(baInputStream));
-		
+		Event event = null;
 		try {
-			Event event;
 			int type = din.readInt();
 			baInputStream.close();
 			din.close();
@@ -89,13 +88,13 @@ public class EventFactory {
 					break;
 				default:
 					System.out.println("Invalid Message Type");
-					return;
+					return null;
 			}
-			// notify the node of the event type and its bytes
-			node.onEvent(event);
 		} catch (IOException ioe) {
+			System.out.println("EventFactory Exception");
 			ioe.printStackTrace();
 		}
+		return event;
 	}
 
 }

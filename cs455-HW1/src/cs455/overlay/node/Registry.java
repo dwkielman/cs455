@@ -27,9 +27,7 @@ import cs455.overlay.wireformats.TaskSummaryRequest;
 import cs455.overlay.wireformats.TaskSummaryResponse;
 
 /**
- * The registry maintains information about the registered messaging nodes in a registry; you can use any
- * data structure for managing this registry but make sure that your choice can support all the operations
- * that you will need.
+ * The Registry maintains information about the registered MessagingNodes in a Registry
  * The Registry can be run after being compiled using the following format:
  * java cs455.overlay.node.Registry portnum(integer)
  */
@@ -44,6 +42,8 @@ public class Registry implements Node {
 	private StatisticsCollectorAndDisplay trafficSummary;
 	private ArrayList<NodeInformation> unsentNodes;
 	private HashMap<NodeInformation, TCPSender> messagingNodeSenders;
+	private TCPServerThread tCPServerThread;
+	private Thread thread;
 	
 	public Registry(int portNumber) {
 		this.portNumber = portNumber;
@@ -52,7 +52,9 @@ public class Registry implements Node {
 		
 		try {
 			TCPServerThread registryServerThread = new TCPServerThread(this.portNumber, this);
-			registryServerThread.start();
+			this.tCPServerThread = registryServerThread;
+			this.thread = new Thread(this.tCPServerThread);
+			this.thread.start();
 			System.out.println("Registry TCPServerThread running.");
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -171,7 +173,11 @@ public class Registry implements Node {
 		this.portNumber = portNumber;
 	}
 	
-	// Registry allows messagingNodes to register themselves. This is performed when a messagingNode starts up for the first time.
+	/**
+	 * Registry allows messagingNodes to register themselves. This is performed when a messagingNode starts up for the first time.
+	 * When the Registry receives a request, it checks to see if the node had previously registered and ensures
+	 * the IP address in the message matches the address where the request originated
+	 */
 	private void handleRegisterRequest(Event event) {
 		if (DEBUG) { System.out.println("begin Registry handleRegisterRequest"); }
 		RegisterRequest registerRequest = (RegisterRequest) event;
@@ -210,34 +216,9 @@ public class Registry implements Node {
 		if (DEBUG) { System.out.println("end Registry handleRegisterRequest"); }
 	}
 	
-	/**
-	 * Used for when the Registry receives a request, it checks to see if the node had previously registered and ensures
-	 * the IP address in the message matches the address where the request originated
-	 * Message Type (int): REGISTER_RESPONSE (6001)
-	 * Status Code (byte): SUCCESS or FAILURE
-	 * Additional Info (String):
-	 */
-	
-	// daniel this is no longer being used, you may be able to delete this method after testing
-	/**
-	private void sendRegistrationResponse(RegisterRequest registerRequest, byte status, String message, NodeInformation node) {
-		try {
-			Socket socket = new Socket(registerRequest.getIPAddress(), registerRequest.getPortNumber());
-			TCPSender sender = new TCPSender(socket);
-			
-			RegisterResponse registerResponse = new RegisterResponse(status, message);
-			
-			
-			sender.sendData(registerResponse.getBytes());
-			//socket.close();
-		} catch (IOException ioe) {
-			ioe.printStackTrace();
-		}
-	}
-	**/
-	
 	// Allows messaging nodes to deregister themselves. This is performed when a messaging node leaves the overlay.
-	private synchronized void handleDeregisterRequest(Event event) {
+	private void handleDeregisterRequest(Event event) {
+	//private synchronized void handleDeregisterRequest(Event event) {
 		if (DEBUG) { System.out.println("begin Registry handleDeregisterRequest"); }
 		DeregisterRequest deregisterRequest = (DeregisterRequest) event;
 		
@@ -261,12 +242,7 @@ public class Registry implements Node {
 		if (DEBUG) { System.out.println("end Registry handleDeregisterRequest"); }
 	}
 	
-	/**
-	 * The Registry Node needs to respond when a messaging node exits and is trying to deregister itself
-	 * Message Type (int): DEREGISTER_REQUEST (6003)
-	 * Status Code (byte): SUCCESS or FAILURE
-	 * Additional Info (String):
-	 */
+	//The Registry Node needs to respond when a messaging node exits and is trying to deregister itself
 	private void sendDeregistrationResponse(DeregisterRequest deregisterRequest, byte status, String message) {
 		if (DEBUG) { System.out.println("begin Registry sendDeregistrationResponse"); }
 		try {
@@ -334,7 +310,8 @@ public class Registry implements Node {
 		if (DEBUG) { System.out.println("end Registry sendTaskSummaryRequest"); }
 	}
 
-	private synchronized void handleTaskSummaryResponse(Event event) {
+	//private synchronized void handleTaskSummaryResponse(Event event) {
+	private void handleTaskSummaryResponse(Event event) {
 		if (DEBUG) { System.out.println("begin Registry handleTaskSummaryResponse"); }
 		
 		TaskSummaryResponse taskSummaryResponse = (TaskSummaryResponse) event;
@@ -441,7 +418,8 @@ public class Registry implements Node {
 	}
 	
 	/**
-	 * lists information about links comprising the overlay. Each link’s information should be on a separate line and include information about the nodes that it connects and the weight of that link.
+	 * Lists information about weights comprising the overlay.
+	 * Each NodeInformation and its weight should be on a separate line and include information about the nodes that it connects and the weight of that link.
 	 */
 	private void listWeights() {
 		if (DEBUG) { System.out.println("begin Registry listWeights"); }

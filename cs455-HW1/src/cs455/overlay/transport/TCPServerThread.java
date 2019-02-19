@@ -5,18 +5,20 @@ import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
 
 import cs455.overlay.node.Node;
 
-public class TCPServerThread extends Thread {
-	
+/**
+ * Creates a TCPServerThread object used for running a given node's incoming connections via the port and node
+ */
+
+public class TCPServerThread implements Runnable  {
 	private static final boolean DEBUG = false;
 	private Node node;
 	private ServerSocket ourServerSocket;
 	private String hostIPAddress;
 	private int portNumber;
-	
+	private boolean isRunning;
 	
 	public TCPServerThread(int portNumber, Node node) {
 		try {
@@ -31,7 +33,10 @@ public class TCPServerThread extends Thread {
 		}
 	}
 	
-	public synchronized void run() {
+	public void run() {
+		// turn on the Server
+		this.isRunning = true;
+		
 		// get the current host IP address
 		try {
 			this.hostIPAddress = InetAddress.getLocalHost().getHostAddress();
@@ -39,16 +44,14 @@ public class TCPServerThread extends Thread {
 			uhe.printStackTrace();
 		}
 		
-		if (DEBUG) {
-			System.out.println("Node is now listening on IP: " + this.hostIPAddress + " Port: " + this.portNumber);
-		}
+		if (DEBUG) { System.out.println("Node is now listening on IP: " + this.hostIPAddress + " Port: " + this.portNumber); }
 		
-		while (!isInterrupted()) {
+		while (isRunning) {
 			try {
 				//Block on accepting connections. Once it has received a connection it will return a socket for us to use.
 				Socket incomingConnectionSocket = ourServerSocket.accept();
 				TCPReceiverThread tcpReceiverThread = new TCPReceiverThread(incomingConnectionSocket, this.node);
-				tcpReceiverThread.start();
+				new Thread(tcpReceiverThread).start();
 			} catch (IOException e) {
 				e.printStackTrace();
 				System.out.println("IOException in TCPServerThread");

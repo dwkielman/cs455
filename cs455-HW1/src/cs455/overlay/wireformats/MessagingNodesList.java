@@ -12,8 +12,7 @@ import java.util.ArrayList;
 import cs455.overlay.node.NodeInformation;
 
 /**
- * Messaging nodes await instructions from the registry regarding the other messaging nodes that they must establish connections to
- * This Protocol represents a message sent from the Registry to the Messaging Nodes regarding the neighbors of a given Messaging Node to connect to its neighboring Messaging Nodes
+ * This Protocol represents a message sent from the Registry to the Messaging Nodes regarding the neighbors of a given MessagingNode of its neighboring MessagingNodes to connect to as constructed in the Overlay.
  * Message Type (int): MESSAGING_NODES_LIST (6004)
  * Number of peer messaging nodes (int): X
  * Messaging node1 Info (ArrayList<NodeInformation>)

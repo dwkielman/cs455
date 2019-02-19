@@ -13,8 +13,8 @@ import cs455.overlay.dijkstra.RoutingCache;
 import cs455.overlay.node.NodeInformation;
 
 /**
- * Data can be fed into the network from any MessagingNode within the overlay. Information is sent from a source node to a destination node
- * A message includes a payload which is a random integer and the route path between the source node and the destination node
+ * When Data is fed through the network from any MessagingNode within the overlay the Information is sent from a source node to a destination node.
+ * A message includes a payload which is a random integer and the route path between the source node and the destination node.
  * Message Type (int): MESSAGE (6010)
  * Source IP address and Port (NodeInformation)
  * Destination IP address and Port (NodeInformation)

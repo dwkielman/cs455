@@ -9,7 +9,7 @@ import cs455.overlay.dijkstra.Edge;
 import cs455.overlay.node.NodeInformation;
 
 /**
- * Weighted overlay consisting of MessagingNodes and Edges.
+ * Construct a weighted overlay consisting of MessagingNodes and Edges.
  */
 
 public class OverlayCreator {
@@ -97,6 +97,7 @@ public class OverlayCreator {
 		return count;
 	}
 	
+	// MessagingNode needs to know what its neighborNodes are, easiest to find in the constructed overlay
 	public ArrayList<NodeInformation> getNeighborNodes(NodeInformation node) {
 		ArrayList<NodeInformation> neighborNodes = new ArrayList<>();
 		

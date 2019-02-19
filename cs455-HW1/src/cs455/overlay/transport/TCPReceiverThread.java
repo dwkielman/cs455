@@ -6,10 +6,15 @@ import java.net.Socket;
 import java.net.SocketException;
 
 import cs455.overlay.node.Node;
+import cs455.overlay.wireformats.Event;
 import cs455.overlay.wireformats.EventFactory;
 
-public class TCPReceiverThread extends Thread {
+/**
+ * Creates a TCPReceieverThread used for incoming connections for a passed socket and node
+ */
 
+public class TCPReceiverThread implements Runnable {
+	
 	private Socket socket;
 	private DataInputStream din;
 	private Node node;
@@ -23,7 +28,7 @@ public class TCPReceiverThread extends Thread {
 	}
 	
 	@Override
-	public synchronized void run() {
+	public void run() {
 		
 		int dataLength;
 		
@@ -33,17 +38,16 @@ public class TCPReceiverThread extends Thread {
 				byte[] data = new byte[dataLength];
 				din.readFully(data, 0, dataLength);
 				
-				// Notify node of event
-				eventFactory.createEvent(data, this.node);
+				// Concstruct Event and notify node of event
+				Event event = eventFactory.createEvent(data, this.node);
+				this.node.onEvent(event);
 				
 			} catch (SocketException se) {
-				System.out.println("SocketException in TCPReceiverThread");
-				//System.out.println(se.getStackTrace());
+				//System.out.println("SocketException in TCPReceiverThread");
 				System.out.println(se.getMessage());
 				break;
 			} catch (IOException ioe) {
-				System.out.println("IOException in TCPReceiverThread");
-				//System.out.println(ioe.getStackTrace());
+				//System.out.println("IOException in TCPReceiverThread");
 				System.out.println(ioe.getMessage());
 				break;
 			}

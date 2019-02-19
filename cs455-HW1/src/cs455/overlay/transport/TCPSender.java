@@ -4,6 +4,9 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
 
+/**
+ * Creates a TCPSender object easily sending data for a given socket
+ */
 public class TCPSender {
 
 	private Socket socket;
@@ -14,6 +17,7 @@ public class TCPSender {
 		dout = new DataOutputStream(socket.getOutputStream());
 	}
 	
+	// use synchronized here to avoid deadlock and ensure only one data is read at a time
 	public synchronized void sendData(byte[] dataToSend) throws IOException {
 		int dataLength = dataToSend.length;
 		dout.writeInt(dataLength);

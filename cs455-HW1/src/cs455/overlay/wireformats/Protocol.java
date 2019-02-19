@@ -1,7 +1,7 @@
 package cs455.overlay.wireformats;
 
 /**
- * Interactions between the registry and the messaging nodes, including prescribed wire-formats
+ * Interactions between the registry and the messaging nodes, including prescribed wire-formats and their type set by an int.
  */
 
 public class Protocol {

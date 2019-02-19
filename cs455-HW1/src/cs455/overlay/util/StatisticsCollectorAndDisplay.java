@@ -4,6 +4,12 @@ import java.util.ArrayList;
 
 import cs455.overlay.wireformats.TaskSummaryResponse;
 
+/**
+ * Class used for displaying the statistics for the information gathered by the MessagingNodes.
+ * Takes a TaskSummaryResponse event and totals the values for the data tracked by MessagingNodes
+ * Display the output in a tabbed format for the Registry
+ */
+
 public class StatisticsCollectorAndDisplay {
 
 	ArrayList<TaskSummaryResponse> stats;
@@ -40,32 +46,30 @@ public class StatisticsCollectorAndDisplay {
 		if (this.stats.size() == this.nodes) {
 			displayStatistics();
 		}
-		
 	}
 	
 	// display the stats in a user-friendly format as defined by the requirements
 	private void displayStatistics() {
-		System.out.println("Node\tNumber of messages sent\tNumber of messages redceived\tSumnmation of sent messages\tSummation of received messages\tNumber of messaged relayed");
+		System.out.println("Node\tNumber of messages sent\t\tNumber of messages received\tSumnmation of sent messages\tSummation of received messages\tNumber of messages relayed");
 		int nodeNum = 1;
 		for (TaskSummaryResponse tsr : stats) {
 			String display = "";
 			display += "Node " + nodeNum + "\t";
-			display += tsr.getNumberOfMessagesSent() + "\t";
-			display += tsr.getNumberOfMessagesReceived() + "\t";
-			display += tsr.getSumSentMessages() + "\t";
-			display += tsr.getSumReceivedMessages() + "\t";
+			display += tsr.getNumberOfMessagesSent() + "\t\t\t\t";
+			display += tsr.getNumberOfMessagesReceived() + "\t\t\t\t";
+			display += tsr.getSumSentMessages() + "\t\t\t";
+			display += tsr.getSumReceivedMessages() + "\t\t\t";
 			display += tsr.getNumberOfMessagesRelayed() + "\t";
 			System.out.println(display);
 			nodeNum++;
 		}
 		String summary = "";
 		summary += "Sum\t";
-		summary += this.sendTracker + "\t";
-		summary += this.receiveTracker + "\t";
-		summary += this.relayTracker + "\t";
-		summary += this.sendSummation + "\t";
-		summary += this.receiveSummation;
+		summary += this.sendTracker + "\t\t\t\t";
+		summary += this.receiveTracker + "\t\t\t\t";
+		summary += this.relayTracker + "\t\t\t\t";
+		summary += this.sendSummation + "\t\t\t";
+		//summary += this.receiveSummation;
 		System.out.println(summary);
 	}
-	
 }

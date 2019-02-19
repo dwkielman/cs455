@@ -9,7 +9,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
- * The registry informs nodes in the overlay when they should start sending messages to each other.
+ * The registry informs nodes in the overlay when they should start their rounds and send messages to each other.
  * Message Type (int): TASK_INITIATE (6006)
  * Rounds (int): X
  */

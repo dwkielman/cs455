@@ -9,7 +9,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
- * Once the registry has received TASK_COMPLETE messages from all the registered nodes it will issue a PULL_TRAFFIC_SUMMARY message. This message is sent to all the registered nodes in the system.
+ * Once the registry has received TASK_COMPLETE messages from all the registered nodes it will issue a PULL_TRAFFIC_SUMMARY message. This message is sent from all the registered nodes in the system to the Registry.
  * Message Type: PULL_TRAFFIC_SUMMARY (6008)
  */
 
