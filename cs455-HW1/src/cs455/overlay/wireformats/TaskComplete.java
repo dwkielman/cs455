@@ -58,6 +58,10 @@ public class TaskComplete implements Event {
 	public int getType() {
 		return this.type;
 	}
+	
+	public NodeInformation getNodeInfo() {
+		return this.nodeInformation;
+	}
 
 	@Override
 	public byte[] getBytes() throws IOException {

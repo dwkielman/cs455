@@ -22,6 +22,7 @@ import cs455.overlay.wireformats.MessagingNodesList;
 import cs455.overlay.wireformats.Protocol;
 import cs455.overlay.wireformats.RegisterRequest;
 import cs455.overlay.wireformats.RegisterResponse;
+import cs455.overlay.wireformats.TaskComplete;
 import cs455.overlay.wireformats.TaskInitiate;
 import cs455.overlay.wireformats.TaskSummaryRequest;
 import cs455.overlay.wireformats.TaskSummaryResponse;
@@ -44,11 +45,13 @@ public class Registry implements Node {
 	private HashMap<NodeInformation, TCPSender> messagingNodeSenders;
 	private TCPServerThread tCPServerThread;
 	private Thread thread;
+	private boolean displayToggle;
 	
 	public Registry(int portNumber) {
 		this.portNumber = portNumber;
 		this.nodesList = new ArrayList<>();
 		this.messagingNodeSenders = new HashMap<NodeInformation, TCPSender>();
+		this.displayToggle = false;
 		
 		try {
 			TCPServerThread registryServerThread = new TCPServerThread(this.portNumber, this);
@@ -81,13 +84,14 @@ public class Registry implements Node {
 		Registry registry = new Registry(registryHostPortNumber);
 		
 		String registryIP = "";
+		
         try{
             registryIP = InetAddress.getLocalHost().getHostAddress();
         } catch (UnknownHostException e) {
             System.out.println(e.getMessage());
         }
 
-        System.out.println(String.format("Registry Started and awaiting orders on port %d and IP address %s.", registry.portNumber, registryIP));
+        System.out.println("Registry is running at IP Address: " + registryIP + " on Port Number: " + registry.portNumber);
         handleUserInput(registry);
 	}
 	
@@ -135,6 +139,14 @@ public class Registry implements Node {
             		System.out.println("Invalid argument. Argument must be a number.");
         			nfe.printStackTrace();
             	}
+            } else if (response.equals("toggle-display")) {
+            	if (registrynode.displayToggle == true) {
+            		registrynode.displayToggle = false;
+            		System.out.println("Message Display is now turned off.");
+            	} else if (registrynode.displayToggle == false) {
+            		registrynode.displayToggle = true;
+            		System.out.println("Message Display is now turned on.");
+            	}
             } else {
             	System.out.println("Command unrecognized");
             }
@@ -144,7 +156,7 @@ public class Registry implements Node {
 	@Override
 	public synchronized void onEvent(Event event) {
 		int eventType = event.getType();
-		System.out.println("Event Type " + eventType + " passed to Registry.");
+		if (displayToggle) { System.out.println("Event Type " + eventType + " passed to Registry."); }
 		switch(eventType) {
 			// REGISTER_REQUEST = 6000
 			case Protocol.REGISTER_REQUEST:
@@ -167,7 +179,7 @@ public class Registry implements Node {
 				return;
 			}
 	}
-
+	
 	@Override
 	public void setLocalHostPortNumber(int portNumber) {
 		this.portNumber = portNumber;
@@ -227,7 +239,7 @@ public class Registry implements Node {
 		String IP = deregisterRequest.getIPAddress();
 		int port = deregisterRequest.getPortNumber();
 		
-		if (DEBUG) { System.out.println("Got Deregister Request from IP: " + IP + " on Port: " + String.valueOf(port) + "."); }
+		if (DEBUG) { System.out.println("Got Deregister Request from IP: " + IP + " on Port: " + port + "."); }
 		
 		NodeInformation ni = new NodeInformation(IP, port);
 		
@@ -272,7 +284,7 @@ public class Registry implements Node {
 			try {
 				// After all MessagingNodes report task completion, wait ~15 seconds before sending request to collect statistics
 				// Use Thread.sleep() in the registry (this is the ONLY place you should use this)
-				System.out.println("After all MessagingNodes report task completion, wait ~15 seconds before sending request to collect statistics.");
+				System.out.println("After all MessagingNodes report task completion, waiting ~15 seconds before sending request to collect statistics.");
 				Thread.sleep(15000);
 			} catch (InterruptedException e) {
 				e.printStackTrace();
@@ -281,8 +293,11 @@ public class Registry implements Node {
 			return;
 		}
 		
-		// still nodes to send the numbverOfRounds to, continue going through list
+		System.out.println("A MessagingNode has sent a TaskComplete, still waiting for " + this.unsentNodes.size() + " more TaskComplete Messages.");
+		
+		// still nodes to send the numberOfRounds to, continue going through list
 		NodeInformation node = this.unsentNodes.remove(0);
+		
 		if (DEBUG) { System.out.println("end Registry handleTaskComplete"); }
 		sendTaskInitiate(node);
 		
@@ -310,7 +325,6 @@ public class Registry implements Node {
 		if (DEBUG) { System.out.println("end Registry sendTaskSummaryRequest"); }
 	}
 
-	//private synchronized void handleTaskSummaryResponse(Event event) {
 	private void handleTaskSummaryResponse(Event event) {
 		if (DEBUG) { System.out.println("begin Registry handleTaskSummaryResponse"); }
 		
@@ -331,7 +345,7 @@ public class Registry implements Node {
 		
 		if (!nodesList.isEmpty()) {
 			for (NodeInformation ni : nodesList) {
-				System.out.println("hostname: " + ni.getNodeIPAddress() + "/tport number: " + ni.getNodePortNumber());
+				System.out.println("Node hostname: " + ni.getNodeIPAddress() + "/tPort Number: " + ni.getNodePortNumber());
 			}
 		} else {
 			System.out.println("No Nodes are currently registered with the Registry.");
@@ -447,9 +461,13 @@ public class Registry implements Node {
 			this.trafficSummary = new StatisticsCollectorAndDisplay(this.nodesList.size());
 			this.unsentNodes = new ArrayList<>(this.nodesList);
 			
+			System.out.println("Rounds are beginning with " + this.unsentNodes.size() + " MessagingNodes.");
+			
 			NodeInformation node = this.unsentNodes.remove(0);
 			
 			sendTaskInitiate(node);
+		} else {
+			System.out.println("Can not start rounds as the overlay has not been created yet.");
 		}
 		if (DEBUG) { System.out.println("end Registry startRounds"); }
 	}

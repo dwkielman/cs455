@@ -70,6 +70,43 @@ public class OverlayCreator {
 				}
 			}
 		}
+		
+		// start from the other end this time
+		Collections.reverse(this.nodesList);
+		
+		// double check that each node has the desired number of connections
+		for (NodeInformation n : nodesList) {
+			boolean addNode = false;
+			if (n.getNumberOfConnections() >= (numberOfConnections)) {
+				break;
+			} else {
+				// get another node to attempt a connection to
+				for (int i=0; i < this.nodesList.size(); i++) {
+					NodeInformation nodeToConnect = this.nodesList.get(i);
+					
+					// ensure that we are not attempting to connect to the same node and that it isn't at max connections yet
+					if ((!nodeToConnect.equals(n)) && (nodeToConnect.getNumberOfConnections() < (numberOfConnections))) {
+						// ensure that these two nodes aren't already connected
+						for (Edge e : edgesList) {
+							if ((e.getSourceNode().equals(n) && e.getDestationNode().equals(nodeToConnect)) || ((e.getSourceNode().equals(nodeToConnect) && e.getDestationNode().equals(n)))) {
+								addNode = false;
+								break;
+							} else {
+								addNode = true;
+							}
+						}
+						
+						if (addNode) {
+							// set a random weight between 1-10 to the Edge
+							this.edgesList.add(new Edge(n, nodeToConnect, random.nextInt(10) + 1));
+							n.addConnection();
+							nodeToConnect.addConnection();
+						}
+					}
+				}
+			}
+			
+		}
 	}
 	
 	// messagingNodes need to reconstruct the overlay using only a list of Edges

@@ -87,7 +87,6 @@ public class MessagingNode implements Node {
 			this.tCPServerThread = serverThread;
 			this.thread = new Thread(this.tCPServerThread);
 			this.thread.start();
-			//serverThread.start();
 			
 			if (DEBUG) { System.out.println("My server port number is: " + this.localHostPortNumber); }
 			
@@ -109,7 +108,7 @@ public class MessagingNode implements Node {
 	@Override
 	public void onEvent(Event event) {
 		int eventType = event.getType();
-		System.out.println("Event " + eventType + " Passed to MessagingNode.");
+		if (displayToggle) { System.out.println("Event " + eventType + " Passed to MessagingNode."); }
 		switch(eventType) {
 			// REGISTER_RESPONSE = 6001
 			case Protocol.REGISTER_RESPONSE:
@@ -222,18 +221,17 @@ public class MessagingNode implements Node {
 	 * IP address (String)
 	 * Port number (int)
 	 */
-	// DANIEL: Still need to test multiple connections being made at the same time on the same server
 	private void connectToRegistry() {
 		if (DEBUG) { System.out.println("begin MessagingNode connectToRegistry"); }
 		try {
-			System.out.println(String.format("Attempting to connect to registry at: %s:%d", this.registryHostName, this.registryHostPortNumber));
+			System.out.println("Attempting to connect to Registry " + this.registryHostName + " at Port Number: " + this.registryHostPortNumber);
 			Socket registrySocket = new Socket(this.registryHostName, this.registryHostPortNumber);
 			
 			System.out.println("Starting TCPReceiverThread with Registry");
 			registryTCPReceiverThread = new TCPReceiverThread(registrySocket, this);
 			Thread tcpReceiverThread = new Thread(this.registryTCPReceiverThread);
 			tcpReceiverThread.start();
-			//registryTCPReceiverThread.start();
+			
 			System.out.println("TCPReceiverThread with Registry started");
 			System.out.println("Sending to " + this.registryHostName + " on Port " + this.registryHostPortNumber);
 			
@@ -272,7 +270,7 @@ public class MessagingNode implements Node {
 	private void disconnectFromRegistry() {
 		if (DEBUG) { System.out.println("begin MessagingNode disconnectFromRegistry"); }
 		try {
-			System.out.println(String.format("Attempting to disconnect to registry at: %s:%d", this.registryHostName, this.registryHostPortNumber));
+			System.out.println("Attempting to disconnect from the Registry " + this.registryHostName + " at Port Number: " + this.registryHostPortNumber);
 			
 			System.out.println("Sending Dergister Request to " + this.registryHostName + " on Port " + this.registryHostPortNumber);
 			
@@ -335,7 +333,7 @@ public class MessagingNode implements Node {
 	private void connectToMessagingNode(NodeInformation nodeToConnectTo) {
 		if (DEBUG) { System.out.println("begin MessagingNode connectToMessagingNode"); }
 		try {
-			System.out.println(String.format("Attempting to connect to messagingNode at: %s:%d", nodeToConnectTo.getNodeIPAddress(), nodeToConnectTo.getNodePortNumber()));
+			System.out.println("Attempting to connect to MessagingNode " + nodeToConnectTo.getNodeIPAddress() + " at Port Number: " + nodeToConnectTo.getNodePortNumber());
 			Socket nodeSocket = new Socket(nodeToConnectTo.getNodeIPAddress(), nodeToConnectTo.getNodePortNumber());
 			
 			if (DEBUG) { System.out.println("Sending to " + nodeToConnectTo.getNodeIPAddress() + " on Port " + nodeToConnectTo.getNodePortNumber()); }
@@ -385,7 +383,7 @@ public class MessagingNode implements Node {
 		if (DEBUG) { System.out.println("MessagingNode got a message type: " + nodeConnectionResponse.getType()); }
 		NodeInformation responderNode = nodeConnectionResponse.getNodeResponder();
 		
-		if (DEBUG) { System.out.println("Got messagingNode request from IP: " + responderNode.getNodeIPAddress() + " on Port: " + String.valueOf(responderNode.getNodePortNumber()) + "."); }
+		if (DEBUG) { System.out.println("Got messagingNode request from IP: " + responderNode.getNodeIPAddress() + " on Port: " + responderNode.getNodePortNumber() + "."); }
 		
 		// successful connection
 		if (nodeConnectionResponse.getStatusCode() == (byte) 1) {
@@ -413,7 +411,7 @@ public class MessagingNode implements Node {
 		}
 			
 		if (this.connectedNeighborNodes.size() == this.neighborNodes.size()) {
-			System.out.println("All connections are established.  Number of connections: " + this.connectedNeighborNodes.size());
+			System.out.println("All connections are established. Number of connections: " + this.connectedNeighborNodes.size());
 		} else {
 			System.out.println("Number of Connections made is currently: " + this.connectedNeighborNodes.size());
 		}
@@ -474,6 +472,8 @@ public class MessagingNode implements Node {
 			
 		this.nonNeighborNodes = otherNodes;
 		
+		System.out.println("Link weights are received and processed. Ready to send messages.");
+		
 		if (DEBUG) { System.out.println("end MessagingNode handleLinkWeights"); }
 	}
 
@@ -482,23 +482,31 @@ public class MessagingNode implements Node {
 		TaskInitiate taskInitiate = (TaskInitiate) event;
 		if (DEBUG) { System.out.println("MessagingNode got a message type: " + taskInitiate.getType()); }
 		
-		ArrayList<NodeInformation> allNodesButMe = this.overlay.getNodesList();
-		NodeInformation me = new NodeInformation(this.localHostIPAddress, this.localHostPortNumber);
-		allNodesButMe.remove(me);
-		
-		int numberOfRounds = taskInitiate.getNumberOfRounds();
-		this.routingCache = new RoutingCache();
-		Random random = new Random();
-		
-		for (int i = 0; i < numberOfRounds; i++) {
-			// get a random Node to build the path that we need for each round
-			int randomNodeNum = random.nextInt(allNodesButMe.size());
-			NodeInformation randomNode = allNodesButMe.get(randomNodeNum);
-			System.out.println(i + " Sending to Random Node: " + randomNode.getNodeIPAddress());
-			prepMessageToMessagingNode(randomNode);
+		if (this.overlay != null && this.connectedNeighborNodes != null) {
+			ArrayList<NodeInformation> allNodesButMe = this.overlay.getNodesList();
+			NodeInformation me = new NodeInformation(this.localHostIPAddress, this.localHostPortNumber);
+			allNodesButMe.remove(me);
+			
+			int numberOfRounds = taskInitiate.getNumberOfRounds();
+			this.routingCache = new RoutingCache();
+			Random random = new Random();
+			
+			System.out.println("Node " + this.localHostIPAddress + " beginning TaskInitiate.");
+			
+			for (int i = 0; i < numberOfRounds; i++) {
+				// get a random Node to build the path that we need for each round
+				int randomNodeNum = random.nextInt(allNodesButMe.size());
+				NodeInformation randomNode = allNodesButMe.get(randomNodeNum);
+				if (displayToggle) { System.out.println(i + " Sending to Random Node: " + randomNode.getNodeIPAddress()); }
+				prepMessageToMessagingNode(randomNode);
+			}
+			System.out.println("Done with TaskInitiate");
+			sendTaskComplete();
+		} else {
+			System.out.println("Can not send any Messages until the overlay has been created and Connections established.");
 		}
-		System.out.println("Done with TaskInitiate");
-		sendTaskComplete();
+		
+		
 		if (DEBUG) { System.out.println("end MessagingNode handleTaskInitiate"); }
 	}
 	
@@ -517,25 +525,11 @@ public class MessagingNode implements Node {
 			shortestPath.execute(me);
 			path = new ArrayList<>(shortestPath.getPath(node));
 			routingCache.addPath(node, path);
-			System.out.println("My path is (starting, to): ");
-			System.out.println(path);
+			if (displayToggle) {
+				System.out.println("My path is (starting, to): ");
+				System.out.println(path);
+			}
 		}
-		
-		// DANIEL: while testing tomorrow, attempt using this format instead
-		/**
-		// destination node has not been routed yet
-		if (!this.routingCache.isRoute(node)) {
-			ShortestPath shortestPath = new ShortestPath(this.overlay);
-			shortestPath.execute(me);
-			path = new ArrayList<>(shortestPath.getPath(node));
-			routingCache.addPath(node, path);
-			System.out.println("My path is (starting, to): ");
-			System.out.println(path);
-		// destination node has already been routed before
-		} else {
-			path = this.routingCache.getPathFromRoutingCache(node);
-		}
-		**/
 		
 		// payload of each message is a random integer with values that range from 2147483647 to -2147483648, same as all the values that an int can hold in java
 		int payload = random.nextInt();
@@ -634,7 +628,7 @@ public class MessagingNode implements Node {
 
 		// end of the list, this node is the destination for the route path
 		if (message.getDestinationNode().equals(me)) {
-			System.out.println("Reached Destination.");
+			if (displayToggle) { System.out.println("Reached Destination."); }
 			this.incrementReceivedCounter();
 			this.addReceiveSummation(message.getPayload());
 			return;
