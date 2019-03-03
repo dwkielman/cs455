@@ -75,8 +75,7 @@ public class ServerStatistics implements Runnable {
 					
 					synchronized (lock) {
 						double runnableServerThroughput = this.serverThroughput / messageRate;
-						resetServerThroughput();
-						
+
 						double totalClientThroughputSum = 0.0;
 						double meanPerClientThroughput = 0.0;
 						double sdPerClientThroughput = 0.0;
@@ -102,6 +101,7 @@ public class ServerStatistics implements Runnable {
 						currentThroughputMessage += " Server Throughput: " + runnableServerThroughput + " messages/s, Active Client Connections: " + this.activeClients  + ", Mean Per-client" + 
 								"Throughput: " + meanPerClientThroughput + " messages/s, Std. Dev. Of Per-client Throughput: " + sdPerClientThroughput + " messages/s";
 						System.out.println(currentThroughputMessage);
+						resetServerThroughput();
 					}
 				}
 			}

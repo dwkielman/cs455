@@ -68,11 +68,11 @@ public class Server {
 		
 		try {
 			server.startServer(serverPortNumber);
+			server.startServerStatisticsThread();
+			server.serverLoop();
 		} catch (IOException ioe) {
 			ioe.printStackTrace();
 		}
-		
-	
 	}
 	
 	private void startServer(int portNumber) throws IOException {
@@ -88,14 +88,15 @@ public class Server {
 			
 			// Register our channel to the selector
 			this.serverSocket.register(this.selector, SelectionKey.OP_ACCEPT);
-			
-			// start the thread for displaying server statistics
-			new Thread(serverStatistics).start();
-			
+
 		} catch (UnknownHostException uhe) {
 			uhe.printStackTrace();
 		}
-		
+	}
+	
+	private void startServerStatisticsThread() {
+		// start the thread for displaying server statistics
+		new Thread(serverStatistics).start();
 	}
 	
 	private void serverLoop() throws IOException {

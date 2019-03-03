@@ -18,28 +18,23 @@ public class SenderThread implements Runnable {
 	private final int messageDividend = 1000;
 	private final int bufferSize = 8192;
 	private final int messageRate;
-	private final HashCodeTracker hashCodeTracker;
 	private final ClientStatistics clientStatistics;
 	private final SocketChannel socketChannel;
 	private final Hash hash = new Hash();
 	
-	public SenderThread(SocketChannel socketChannel, int messageRate, ClientStatistics clientStatistics, HashCodeTracker hashCodeTracker) {
+	public SenderThread(SocketChannel socketChannel, int messageRate, ClientStatistics clientStatistics) {
 		this.socketChannel = socketChannel;
 		this.messageRate = messageDividend / messageRate;
 		this.clientStatistics = clientStatistics;
-		this.hashCodeTracker = hashCodeTracker;
 	}
 	
 	@Override
 	public void run() {
-
+		byte[] messageBytes = createRandomBytes();
+		String message = null;
+		
 		while(true) {
-			byte[] messageBytes = createRandomBytes();
-			String message = null;
-
 			message = hash.SHA1FromBytes(messageBytes);
-			// increment our message counter developed later
-			// add the message to the hash code tracker
 
 			ByteBuffer buffer = ByteBuffer.wrap(messageBytes);
 			buffer.rewind();
@@ -57,6 +52,9 @@ public class SenderThread implements Runnable {
 			}
 			
 			// increment the send message here
+			this.clientStatistics.incrementMessagesSent();
+			// add the message to the hash code tracker
+			this.clientStatistics.addHashCode(message);
 			
 			// sleep until more messages are ready to be sent
 			try {

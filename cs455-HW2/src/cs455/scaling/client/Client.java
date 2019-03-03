@@ -2,11 +2,15 @@ package cs455.scaling.client;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
+import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.Set;
 
 import cs455.scaling.server.Server;
 import cs455.scaling.server.ThreadPoolManager;
+import cs455.scaling.server.Throughput;
 
 /**
  * A client provides the following functionalities:
@@ -22,8 +26,9 @@ import cs455.scaling.server.ThreadPoolManager;
 public class Client {
 	
 	// maintains the hash codes in a linked list
-	private LinkedList<String> hashCodesList;
+	private static final ClientStatistics clientStatistics = new ClientStatistics();;
 	private static SocketChannel clientSocketChannel;
+	
 	
 	// For every data packet that is published, the client adds the corresponding hashcode to the linked list
 	
@@ -53,12 +58,15 @@ public class Client {
 			System.out.println("Invalid argument(s).");
 			nfe.printStackTrace();
 		}
-		
-		client.connectToServer(serverHostName, serverPortNumber);
-		// create hashTracker
-		// create a task if needed
-		// start the atsk
-		// senderThread create and start
+
+		try {
+			client.connectToServer(serverHostName, serverPortNumber);
+			client.startClientStatisticsThread();
+			client.startSenderThread(messageRate);
+			client.clientLoop();
+		} catch (IOException ioe) {
+			ioe.printStackTrace();
+		}
 		
 	}
 
@@ -71,18 +79,65 @@ public class Client {
 			clientSocketChannel.configureBlocking(false);
 			// Connect to the server
 			clientSocketChannel.connect(new InetSocketAddress(serverHostName, serverPortNumber));
-			// might need to do more here
         } catch (IOException e) {
             e.printStackTrace();
         }
 	}
 	
+	private void startClientStatisticsThread() {
+		// start the thread for displaying client statistics
+		new Thread(clientStatistics).start();
+	}
 	
-	/**
-	 * once every 20 seconds after starting up, every client should print the number of messages it has sent and received during the last 20 seconds. This log message should look similar to the following.
-	 * 
-	 * [timestamp] Total Sent Count: x, Total Received Count: y
-	 * 
-	 */
+	private void startSenderThread(int messageRate) {
+		SenderThread senderThread = new SenderThread(clientSocketChannel, messageRate, clientStatistics);
+		new Thread(senderThread).start();
+	}
+	
+	private void clientLoop() throws IOException {
+		
+		while (true) {
+			System.out.println("Client listening for incoming Messages.");
+		}
+		
+		/**
+		 * 
+		 * 
+            // Block here
+            this.selector.select();
+            System.out.println("\tActivity on selector!");
+            
+            // Key(s) are ready
+            Set<SelectionKey> selectedKeys = selector.selectedKeys();
+            // Loop over ready keys
+            Iterator<SelectionKey> iter = selectedKeys.iterator();
+            while (iter.hasNext()) {
+                // Grab current key
+                SelectionKey key = iter.next();
+                
+                // Optional
+                if(key.isValid() == false) { 
+                    continue; 
+                }
+
+                // New connection on serverSocket
+                if (key.isAcceptable()) {
+                    register(selector, serverSocket);
+                    Throughput throughput = serverStatistics.addClient();
+                    key.attach(throughput);
+                }
+ 
+                // Previous connection has data to read
+                if (key.isReadable()) {
+                    readAndRespond(key);
+                }
+
+                // Remove it from our set
+                iter.remove();
+            }
+		}
+		 * 
+		 */
+	}
 
 }
