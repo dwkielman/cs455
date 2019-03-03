@@ -1,6 +1,12 @@
 package cs455.scaling.client;
 
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.nio.channels.SocketChannel;
 import java.util.LinkedList;
+
+import cs455.scaling.server.Server;
+import cs455.scaling.server.ThreadPoolManager;
 
 /**
  * A client provides the following functionalities:
@@ -17,6 +23,7 @@ public class Client {
 	
 	// maintains the hash codes in a linked list
 	private LinkedList<String> hashCodesList;
+	private static SocketChannel clientSocketChannel;
 	
 	// For every data packet that is published, the client adds the corresponding hashcode to the linked list
 	
@@ -24,7 +31,51 @@ public class Client {
 	
 	// Once the hashcode has been verified, it can be removed from the linked list
 	
-	
+	public static void main(String[] args) {
+		
+		// requires 1 argument to initialize a registry
+		if(args.length != 3) {
+		    System.out.println("Invalid Arguments. Must include a Server Host Name, Server Port Number and Message Rate");
+		    return;
+		}
+		
+		Client client = new Client();
+		
+		String serverHostName = "";
+		int serverPortNumber = 0;
+		int messageRate = 0;
+		
+		try {
+			serverHostName = args[0];
+			serverPortNumber = Integer.parseInt(args[1]);
+			messageRate = Integer.parseInt(args[2]);
+		} catch (NumberFormatException nfe) {
+			System.out.println("Invalid argument(s).");
+			nfe.printStackTrace();
+		}
+		
+		client.connectToServer(serverHostName, serverPortNumber);
+		// create hashTracker
+		// create a task if needed
+		// start the atsk
+		// senderThread create and start
+		
+	}
+
+	private void connectToServer(String serverHostName, int serverPortNumber) {
+		try {
+			System.out.println("Client attempting to Connect to Server.");
+  			// Open the socket channel for incoming connections
+			clientSocketChannel = SocketChannel.open();
+			// non-blocking
+			clientSocketChannel.configureBlocking(false);
+			// Connect to the server
+			clientSocketChannel.connect(new InetSocketAddress(serverHostName, serverPortNumber));
+			// might need to do more here
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+	}
 	
 	
 	/**
