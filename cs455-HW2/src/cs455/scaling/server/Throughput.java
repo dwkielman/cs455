@@ -22,5 +22,4 @@ public class Throughput {
 	private synchronized void resetThroughput() {
 		this.messageThroughput = 0;
 	}
-	
 }

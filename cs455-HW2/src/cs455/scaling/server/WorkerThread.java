@@ -24,7 +24,8 @@ public class WorkerThread implements Runnable {
 		while(true) {
 			synchronized(this) {
 				if(currentTask != null) {
-					currentTask.run();
+					//currentTask.run();
+					currentTask.startTask();
 					isDoneWithTask = true;
 					currentTask = null;
 					threadPool.addWorkerThreadBackToPool(this);

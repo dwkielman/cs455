@@ -16,6 +16,7 @@ public class ClientStatistics implements Runnable {
 	public ClientStatistics() {
 		this.messagesSent = 0;
 		this.messagesReceived = 0;
+		this.hashCodes = new LinkedList<String>();
 	}
 	
 	public synchronized void incrementMessagesSent() {

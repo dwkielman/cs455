@@ -30,13 +30,26 @@ import cs455.scaling.hash.Hash;
 
 public class Server {
 	
+	private final int portNumber;
+	private final int threadPoolSize;
+	private final int batchSize;
+	private final int batchTime;
 	private static ThreadPoolManager threadPoolManager;
-	private static ServerSocketChannel serverSocket;
-	private static Selector selector;
-	private static final ServerStatistics serverStatistics = new ServerStatistics();
-	private final static Hash hash = new Hash();
+	private ServerSocketChannel serverSocket;
+	private Selector selector;
+	private static ServerStatistics serverStatistics;
+	private static Hash hash = new Hash();
 	
 	// Upon receiving the data, the server will compute the hash code for the data packet and send this back to the client
+	
+	public Server(int portNumber, int threadPoolSize, int batchSize, int batchTime) {
+		this.portNumber = portNumber;
+		this.threadPoolSize = threadPoolSize;
+		this.batchSize = batchSize;
+		this.batchTime = batchTime;
+		this.serverStatistics = new ServerStatistics();
+		this.threadPoolManager = new ThreadPoolManager(threadPoolSize, batchSize, batchTime);
+	}
 	
 	// sends an acknowledgement to the client
 	public static void main(String[] args) {
@@ -46,8 +59,6 @@ public class Server {
 		    System.out.println("Invalid Arguments. Must include a Port Number, Thread Pool Size, Batch Size and Batch Time");
 		    return;
 		}
-		
-		Server server = new Server();
 		
 		int serverPortNumber = 0;
 		int threadPoolSize = 0;
@@ -63,11 +74,11 @@ public class Server {
 			System.out.println("Invalid argument. Argument must be a number.");
 			nfe.printStackTrace();
 		}
-		
-		server.threadPoolManager = new ThreadPoolManager(threadPoolSize, batchSize, batchTime);
+		Server server = new Server(serverPortNumber, threadPoolSize, batchSize, batchTime);
 		
 		try {
 			server.startServer(serverPortNumber);
+			//server.selector.open();
 			server.startServerStatisticsThread();
 			server.serverLoop();
 		} catch (IOException ioe) {
@@ -79,15 +90,15 @@ public class Server {
 		System.out.println("Starting Server begin.");
 		try {
 			// Open the selector
-			this.selector.open();
+			this.selector = Selector.open();
 			
 			// Create our input channel
-			this.serverSocket = ServerSocketChannel.open();
-			this.serverSocket.bind(new InetSocketAddress(InetAddress.getLocalHost().getHostAddress(), portNumber));
-			this.serverSocket.configureBlocking(false);
+			serverSocket = ServerSocketChannel.open();
+			serverSocket.bind(new InetSocketAddress(InetAddress.getLocalHost().getHostAddress(), portNumber));
+			serverSocket.configureBlocking(false);
 			
 			// Register our channel to the selector
-			this.serverSocket.register(this.selector, SelectionKey.OP_ACCEPT);
+			serverSocket.register(this.selector, SelectionKey.OP_ACCEPT);
 
 		} catch (UnknownHostException uhe) {
 			uhe.printStackTrace();
@@ -101,11 +112,11 @@ public class Server {
 	
 	private void serverLoop() throws IOException {
 		while (true) {
-			System.out.println("Listening for new connections or new messages.");
+			//System.out.println("Listening for new connections or new messages.");
 			
             // Block here
             this.selector.select();
-            System.out.println("\tActivity on selector!");
+            //System.out.println("\tActivity on selector!");
             
             // Key(s) are ready
             Set<SelectionKey> selectedKeys = selector.selectedKeys();
@@ -114,8 +125,8 @@ public class Server {
             while (iter.hasNext()) {
                 // Grab current key
                 SelectionKey key = iter.next();
-                
-                // Optional
+
+            	// Optional
                 if(key.isValid() == false) { 
                     continue; 
                 }
@@ -123,8 +134,8 @@ public class Server {
                 // New connection on serverSocket
                 if (key.isAcceptable()) {
                     register(selector, serverSocket);
-                    Throughput throughput = serverStatistics.addClient();
-                    key.attach(throughput);
+                    //Throughput throughput = serverStatistics.addClient();
+                    //key.attach(throughput);
                 }
  
                 // Previous connection has data to read
@@ -143,8 +154,13 @@ public class Server {
         SocketChannel client = serverSocket.accept();
         // Configure it to be a new channel and key that our selector should monitor
         client.configureBlocking(false);
-        client.register(selector, SelectionKey.OP_READ);
+        //client.register(selector, SelectionKey.OP_READ);
+        
+        SelectionKey key = client.register(selector, SelectionKey.OP_READ);
+        
         serverStatistics.incremementServerThroughput();
+        Throughput throughput = serverStatistics.addClient();
+        key.attach(throughput);
         System.out.println("\t\tNew client registered.");
     }
 	

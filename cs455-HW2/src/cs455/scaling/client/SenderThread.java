@@ -2,6 +2,7 @@ package cs455.scaling.client;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 import java.security.NoSuchAlgorithmException;
 import java.util.Random;
@@ -21,41 +22,57 @@ public class SenderThread implements Runnable {
 	private final ClientStatistics clientStatistics;
 	private final SocketChannel socketChannel;
 	private final Hash hash = new Hash();
+	private SelectionKey key;
 	
-	public SenderThread(SocketChannel socketChannel, int messageRate, ClientStatistics clientStatistics) {
+	public SenderThread(SocketChannel socketChannel, int messageRate, ClientStatistics clientStatistics, SelectionKey key) {
 		this.socketChannel = socketChannel;
 		this.messageRate = messageDividend / messageRate;
 		this.clientStatistics = clientStatistics;
+		this.key = key;
 	}
 	
 	@Override
 	public void run() {
-		byte[] messageBytes = createRandomBytes();
-		String message = null;
-		
+		SocketChannel socketChannel = (SocketChannel) key.channel();
+
 		while(true) {
+			byte[] messageBytes = createRandomBytes();
+			String message = null;
+			
 			message = hash.SHA1FromBytes(messageBytes);
 
 			ByteBuffer buffer = ByteBuffer.wrap(messageBytes);
 			buffer.rewind();
 
+			while (buffer.hasRemaining()) {
+				try {
+					socketChannel.write(buffer);
+				} catch (IOException ioe) {
+					ioe.printStackTrace();
+				}
+			}
+			
+			// After writing, register an interest in Reading.
+	        //key.interestOps(SelectionKey.OP_READ);
+			
 			// synchronize?
 			
 			// this may be incorrect, need to test and figure out
-			try {
-				socketChannel.write(buffer);
-				buffer.clear();
+			//try {
+				
+				//buffer.clear();
 				//buffer.put(messageBytes);
 				//buffer.flip();
-			} catch (IOException ioe) {
-				ioe.printStackTrace();
-			}
+			//} catch (IOException ioe) {
+				//ioe.printStackTrace();
+			//}
 			
 			// increment the send message here
 			this.clientStatistics.incrementMessagesSent();
 			// add the message to the hash code tracker
 			this.clientStatistics.addHashCode(message);
-			
+			// After writing, register an interest in Reading.
+	        this.key.interestOps(SelectionKey.OP_READ);
 			// sleep until more messages are ready to be sent
 			try {
 				Thread.sleep(messageRate);
@@ -67,8 +84,9 @@ public class SenderThread implements Runnable {
 	}
 
 	private byte[] createRandomBytes() {
+		Random random = new Random();
 		byte[] randomBytes = new byte[bufferSize];
-		new Random().nextBytes(randomBytes);
+		random.nextBytes(randomBytes);
 		
 		return randomBytes;
 	}
