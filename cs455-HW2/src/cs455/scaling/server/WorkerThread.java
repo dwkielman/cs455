@@ -3,7 +3,6 @@ package cs455.scaling.server;
 public class WorkerThread implements Runnable {
 	
 	private ThreadPool threadPool;
-	private boolean isDoneWithTask = false;
 	private Task currentTask;
 	
 	public WorkerThread(ThreadPool threadPool) {
@@ -14,7 +13,6 @@ public class WorkerThread implements Runnable {
 	public synchronized void assignTaskToWorkerThread(Task task) {
 		if (task != null) {
 			this.currentTask = task;
-			isDoneWithTask = false;
 			notify();
 		}
 	}
@@ -25,8 +23,8 @@ public class WorkerThread implements Runnable {
 			synchronized(this) {
 				if(currentTask != null) {
 					//currentTask.run();
-					currentTask.startTask();
-					isDoneWithTask = true;
+					//currentTask.startTask();
+					currentTask.improvedSendHashResponse();
 					currentTask = null;
 					threadPool.addWorkerThreadBackToPool(this);
 				}

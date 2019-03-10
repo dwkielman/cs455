@@ -1,19 +1,19 @@
 package cs455.scaling.client;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.Set;
 
 import cs455.scaling.hash.Hash;
-import cs455.scaling.server.Server;
-import cs455.scaling.server.ThreadPoolManager;
-import cs455.scaling.server.Throughput;
 
 /**
  * A client provides the following functionalities:
@@ -28,13 +28,16 @@ import cs455.scaling.server.Throughput;
 
 public class Client {
 	
-	// maintains the hash codes in a linked list
 	private final ClientStatistics clientStatistics;
 	private static SocketChannel clientSocketChannel;
 	private Selector selector;
-	private final int bufferSize = 8192;
+	private static final int BUFFER_SIZE = 8192;
 	private final int messageRate;
 	private final static Hash hash = new Hash();
+	private DataInputStream dataInputStream;
+	private Socket socket;
+	private SenderThread senderThread;
+	private static SelectionKey key;
 	
 	public Client(int messageRate) {
 		this.messageRate = messageRate;
@@ -48,7 +51,7 @@ public class Client {
 	
 	public static void main(String[] args) {
 		
-		// requires 1 argument to initialize a registry
+		// requires 1 argument to initialize a Client
 		if(args.length != 3) {
 		    System.out.println("Invalid Arguments. Must include a Server Host Name, Server Port Number and Message Rate");
 		    return;
@@ -70,12 +73,38 @@ public class Client {
 		Client client = new Client(messageRate);
 
 		try {
-			client.connectToServer(serverHostName, serverPortNumber);
-			client.clientLoop();
+			//client.connectToServer(serverHostName, serverPortNumber);
+			
+			client.improvedConnectToServer(serverHostName, serverPortNumber);
+			client.improvedClientLoop();
+			//client.finishConnectionToServer(key);
+			//client.clientLoop();
 		} catch (IOException ioe) {
 			ioe.printStackTrace();
 		}
 	}
+	
+	private void improvedConnectToServer(String serverHostName, int serverPortNumber) throws UnknownHostException, IOException {
+		socket = new Socket(serverHostName, serverPortNumber);
+		dataInputStream = new DataInputStream(socket.getInputStream());
+		DataOutputStream dataOutputStream = new DataOutputStream(socket.getOutputStream());
+		startClientStatisticsThread();
+		improvedStartSenderThread(dataOutputStream);
+		
+	}
+	
+	private void improvedClientLoop() {
+		while (true) {
+			byte[] incomingData = new byte[40];
+			try {
+				this.dataInputStream.readFully(incomingData);
+				this.senderThread.readHash(new String(incomingData));
+			} catch (IOException ioe) {
+				ioe.printStackTrace();
+			}
+		}
+	}
+	
 
 	private void connectToServer(String serverHostName, int serverPortNumber) {
 		try {
@@ -90,7 +119,12 @@ public class Client {
 			// Connect to the server
 			clientSocketChannel.connect(new InetSocketAddress(serverHostName, serverPortNumber));
 			// Set channel ready for accepting connections
-			clientSocketChannel.register(selector, SelectionKey.OP_CONNECT);
+			// testing with this connection commented out to get the SelectionKey
+			//clientSocketChannel.register(selector, SelectionKey.OP_CONNECT);
+			key = clientSocketChannel.register(selector, SelectionKey.OP_CONNECT);
+
+			//socket = new Socket(serverHostName, serverPortNumber);
+
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -101,8 +135,13 @@ public class Client {
 		new Thread(clientStatistics).start();
 	}
 	
+	private void improvedStartSenderThread(DataOutputStream dataOutputStream) {
+		senderThread = new SenderThread(dataOutputStream, messageRate, clientStatistics);
+		new Thread(senderThread).start();
+	}
+	
 	private void startSenderThread(SelectionKey key) {
-		SenderThread senderThread = new SenderThread(clientSocketChannel, messageRate, clientStatistics, key);
+		senderThread = new SenderThread(clientSocketChannel, messageRate, clientStatistics, key);
 		new Thread(senderThread).start();
 	}
 	
@@ -111,13 +150,21 @@ public class Client {
 		socketChannel.finishConnect();
 		startClientStatisticsThread();
 		startSenderThread(key);
-		key.interestOps(SelectionKey.OP_READ);
+		// trying out being interested only in writing to the server
+		// FRIDAY NIGHT, TURNING OFF WRITING ENTIRELY HERE
+		//key.interestOps(SelectionKey.OP_WRITE);
+		
+		// trying out being interested in both reading and writing from the server
+		//key.interestOps(SelectionKey.OP_READ & SelectionKey.OP_WRITE); 
+		//key.interestOps(SelectionKey.OP_READ);
 	}
 	
-	private void read(SelectionKey key) {
+	private void read(SelectionKey key, ByteBuffer readBuffer) {
 		System.out.println("Reading data from server...");
+		// testing out blocking on writing while we are reading
+		//key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
 		SocketChannel socketChannel = (SocketChannel) key.channel();
-        ByteBuffer readBuffer = ByteBuffer.allocate(40);
+        //ByteBuffer readBuffer = ByteBuffer.allocate(40);
         int bytesRead = 0;
         
         try {
@@ -138,15 +185,20 @@ public class Client {
 			
 			String hashedString = new String(readBuffer.array());
 			
+			/**
 			if (this.clientStatistics.removeHashCode(hashedString.trim())) {
 				this.clientStatistics.incrementMessagesReceived();
+				this.clientStatistics.removeHashCode(hashedString.trim());
 				System.out.println("Removed Task with Hashed String " + hashedString);
 			} else {
 				System.out.println("Incorrect work sent to Client");
 			}
+			**/
+			readBuffer.clear();
 			
 			// After reading, register an interest in Writing
-	        key.interestOps(SelectionKey.OP_WRITE);
+			// testing removing this line for now
+	        //key.interestOps(SelectionKey.OP_WRITE);
 		} catch(Exception e) {
 			e.printStackTrace();
 		}finally {
@@ -156,18 +208,22 @@ public class Client {
 	}
 	
 	private void clientLoop() throws IOException {
-		
+		System.out.println("In the Client Loop");
 		while (true) {
-			//System.out.println("Client listening for incoming Messages.");
-			
 			// Block here
             this.selector.select();
             
             // Key(s) are ready
             Set<SelectionKey> selectedKeys = selector.selectedKeys();
+            
+            // Prepare bytebuffer always ready for 40 bytes of data
+ 			ByteBuffer buffer = ByteBuffer.allocate(40);
+            
+            //System.out.println("Size of keys: " + selectedKeys.size());
             // Loop over ready keys
             Iterator<SelectionKey> iter = selectedKeys.iterator();
             while (iter.hasNext()) {
+            	System.out.println("Iterating");
                 // Grab current key
                 SelectionKey key = iter.next();
 
@@ -178,17 +234,18 @@ public class Client {
 
                 // New connection on serverSocket
                 if(key.isConnectable()) {
+                	System.out.println("Finish connecting");
                 	this.finishConnectionToServer(key);
                 }
                 
                 // Previous connection has data to read
                 if (key.isReadable()) {
-                    read(key);
+                	System.out.println("Reading a message");
+                    read(key, buffer);
                 }
 
                 // Remove it from our set
                 iter.remove();
-
             }
 		}
 	}

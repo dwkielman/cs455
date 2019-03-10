@@ -80,6 +80,7 @@ public class Server {
 			server.startServer(serverPortNumber);
 			//server.selector.open();
 			server.startServerStatisticsThread();
+			server.startThreadPoolManagerThread();
 			server.serverLoop();
 		} catch (IOException ioe) {
 			ioe.printStackTrace();
@@ -110,6 +111,11 @@ public class Server {
 		new Thread(serverStatistics).start();
 	}
 	
+	private void startThreadPoolManagerThread() {
+		// start the thread for displaying server statistics
+		new Thread(threadPoolManager).start();
+	}
+	
 	private void serverLoop() throws IOException {
 		while (true) {
 			//System.out.println("Listening for new connections or new messages.");
@@ -125,55 +131,55 @@ public class Server {
             while (iter.hasNext()) {
                 // Grab current key
                 SelectionKey key = iter.next();
+                
+                synchronized (key) {
+                	// Optional
+                    if(key.isValid() == false) { 
+                        continue; 
+                    }
 
-            	// Optional
-                if(key.isValid() == false) { 
-                    continue; 
+                    // New connection on serverSocket
+                    if (key.isAcceptable()) {
+                        register(selector, serverSocket);
+                    }
+     
+                    // Previous connection has data to read
+                    if (key.isReadable() && key.attachment() != null) {
+                        readAndRespond(key);
+                    }
                 }
-
-                // New connection on serverSocket
-                if (key.isAcceptable()) {
-                    register(selector, serverSocket);
-                    //Throughput throughput = serverStatistics.addClient();
-                    //key.attach(throughput);
-                }
- 
-                // Previous connection has data to read
-                if (key.isReadable()) {
-                    readAndRespond(key);
-                }
-
                 // Remove it from our set
                 iter.remove();
             }
 		}
 	}
 	
-	private static void register(Selector selector, ServerSocketChannel serverSocket) throws IOException {
+	private synchronized void register(Selector selector, ServerSocketChannel serverSocket) throws IOException {
         // Grab the incoming socket from the serverSocket
         SocketChannel client = serverSocket.accept();
         // Configure it to be a new channel and key that our selector should monitor
         client.configureBlocking(false);
-        //client.register(selector, SelectionKey.OP_READ);
-        
-        SelectionKey key = client.register(selector, SelectionKey.OP_READ);
-        
-        serverStatistics.incremementServerThroughput();
+
+        //SelectionKey key = client.register(selector, SelectionKey.OP_ACCEPT);
         Throughput throughput = serverStatistics.addClient();
-        key.attach(throughput);
+        client.register(selector, SelectionKey.OP_READ, throughput);
+        serverStatistics.incremementServerThroughput();
         System.out.println("\t\tNew client registered.");
     }
 	
 	private static void readAndRespond(SelectionKey key) throws IOException {
-		// Close off key for reading so we can send data
-		key.interestOps(SelectionKey.OP_WRITE);
-		
 		// create a task to send to the client
-		Task task = new Task(key, serverStatistics, hash);
+		Task task = new Task(key, serverStatistics, hash, threadPoolManager);
+		//synchronized (task) {
+			task.readTask();
+		//}
 		
 		// add the taks to the queue of things that the thread pool manager needs to do
-		threadPoolManager.addTask(task);   
-		threadPoolManager.assignTaskToWorkerThread();
+		//threadPoolManager.addTask(task);
+		
+		//threadPoolManager.improvedAddTask(task, key);
+		//threadPoolManager.assignTaskToWorkerThread();
+		//key.interestOps(SelectionKey.OP_READ);
     }
 
 }

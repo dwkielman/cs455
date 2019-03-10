@@ -3,6 +3,7 @@ package cs455.scaling.server;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Every 20 seconds, the server should print its current throughput (number of messages processed per second during last 20 seconds), the number of active client connections, and mean and standard 
@@ -16,8 +17,10 @@ import java.util.ArrayList;
 public class ServerStatistics implements Runnable {
 	
 	// process messages every 20 seconds
-	private final long messageRate = 20;
+	private static final long MESSAGE_RATE = 20;
 	private ArrayList<Throughput> activeClientsThroughputList;
+	private AtomicInteger activeClientsAtomic = new AtomicInteger(0);
+	private AtomicInteger serverThroughputAtomic = new AtomicInteger(0);
 	private int serverThroughput;
 	private int activeClients;
 	private final Object lock = new Object();
@@ -31,6 +34,7 @@ public class ServerStatistics implements Runnable {
 	
 	public synchronized Throughput addClient() {
 			this.activeClients++;
+			this.activeClientsAtomic.incrementAndGet();
 			Throughput throughput = new Throughput();
 			this.activeClientsThroughputList.add(throughput);
 			return throughput;
@@ -38,10 +42,12 @@ public class ServerStatistics implements Runnable {
 
 	public synchronized void incremementServerThroughput() {
 		this.serverThroughput++;
+		this.serverThroughputAtomic.incrementAndGet();
 	}
 	
 	private synchronized void resetServerThroughput() {
 		this.serverThroughput = 0;
+		this.serverThroughputAtomic.set(0);
 	}
 	
 	private double calculateSD(ArrayList<Double> throughputList, double sum, double mean) {
@@ -62,19 +68,21 @@ public class ServerStatistics implements Runnable {
 	@Override
 	public void run() {
 		// Create the time we will wait until
-		LocalDateTime messageTime = LocalDateTime.now().plusSeconds(messageRate);
+		LocalDateTime messageTime = LocalDateTime.now().plusSeconds(MESSAGE_RATE);
 			while (true) {
 				// get the current time
 				LocalDateTime now = LocalDateTime.now();
 				// only print when it's been 20 seconds since the last message
 				if (now.isAfter(messageTime)) {
-					messageTime = now.plusSeconds(messageRate);
+					messageTime = now.plusSeconds(MESSAGE_RATE);
 					
 					synchronized (lock) {
 						
 						if (!this.activeClientsThroughputList.isEmpty()) {
-							double runnableServerThroughput = this.serverThroughput / messageRate;
-	
+							// testing with the atomic variables referenced instead
+							//double runnableServerThroughput = this.serverThroughput / messageRate;
+							double runnableServerThroughput = this.serverThroughputAtomic.get() / MESSAGE_RATE;
+							
 							double totalClientThroughputSum = 0.0;
 							double meanPerClientThroughput = 0.0;
 							double sdPerClientThroughput = 0.0;
@@ -97,8 +105,12 @@ public class ServerStatistics implements Runnable {
 							// message should look like the following: [timestamp] Server Throughput: x messages/s, Active Client Connections: y, Mean Per-client
 							// Throughput: p messages/s, Std. Dev. Of Per-client Throughput: q messages/s
 							String currentThroughputMessage = "[" + messageTime.format(dateTimeFormat) + "]";
-							currentThroughputMessage += " Server Throughput: " + runnableServerThroughput + " messages/s, Active Client Connections: " + this.activeClients  + ", Mean Per-client" + 
+							// testing with the atomic variables referenced instead
+							//currentThroughputMessage += " Server Throughput: " + runnableServerThroughput + " messages/s, Active Client Connections: " + this.activeClients  + ", Mean Per-client" + 
+									//"Throughput: " + meanPerClientThroughput + " messages/s, Std. Dev. Of Per-client Throughput: " + sdPerClientThroughput + " messages/s";
+							currentThroughputMessage += " Server Throughput: " + runnableServerThroughput + " messages/s, Active Client Connections: " + this.activeClientsAtomic.get()  + ", Mean Per-client" + 
 									"Throughput: " + meanPerClientThroughput + " messages/s, Std. Dev. Of Per-client Throughput: " + sdPerClientThroughput + " messages/s";
+							
 							System.out.println(currentThroughputMessage);
 							resetServerThroughput();
 					}

@@ -25,31 +25,4 @@ public class Hash {
 		
 		return hashInt.toString(16);
 	}
-	/**
-	public static void main(String[] args) {
-
-		byte[] messageBytes = createRandomBytes();
-		String message = null;
-		
-		Hash hash = new Hash();
-
-		message = hash.SHA1FromBytes(messageBytes);
-
-		ByteBuffer buffer = ByteBuffer.wrap(messageBytes);
-		buffer.rewind();
-
-		System.out.println(message);
-		
-		}
-	
-	private final static int bufferSize = 8192;
-	
-	public static byte[] createRandomBytes() {
-		Random random = new Random();
-		byte[] randomBytes = new byte[bufferSize];
-		random.nextBytes(randomBytes);
-		
-		return randomBytes;
-	}
-	**/
 }
