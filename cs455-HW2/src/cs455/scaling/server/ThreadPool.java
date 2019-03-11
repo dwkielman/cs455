@@ -2,7 +2,7 @@ package cs455.scaling.server;
 
 import java.util.LinkedList;
 
-	//The thread pool needs methods that allow:
+	// The thread pool needs methods that allow:
 	// (1) a spare worker thread to be retrieved and
 	// (2) a worker thread to return itself to the pool after it has finished it task.
 
@@ -38,7 +38,7 @@ public class ThreadPool {
 		synchronized(threadPool) {
 			spareWorkerThread = threadPool.poll();
 			if (spareWorkerThread == null) {
-				System.out.println("No worker threads available. Wait for one to be added back to the pool.");
+				//System.out.println("No worker threads available. Wait for one to be added back to the pool.");
 				try {
 					threadPool.wait();
 					spareWorkerThread = threadPool.removeFirst();
@@ -47,7 +47,6 @@ public class ThreadPool {
 				}
 			}
 		}
-		
 		return spareWorkerThread;
 	}
 	

@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
-import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
@@ -24,8 +23,6 @@ import cs455.scaling.hash.Hash;
  * 
  * Executed with the following command:
  * java cs455.scaling.server.Server portnum thread-pool-size batch-size batch-time
- *
- *
  */
 
 public class Server {
@@ -39,8 +36,6 @@ public class Server {
 	private Selector selector;
 	private static ServerStatistics serverStatistics;
 	private static Hash hash = new Hash();
-	
-	// Upon receiving the data, the server will compute the hash code for the data packet and send this back to the client
 	
 	public Server(int portNumber, int threadPoolSize, int batchSize, int batchTime) {
 		this.portNumber = portNumber;
@@ -75,10 +70,9 @@ public class Server {
 			nfe.printStackTrace();
 		}
 		Server server = new Server(serverPortNumber, threadPoolSize, batchSize, batchTime);
-		
+
 		try {
 			server.startServer(serverPortNumber);
-			//server.selector.open();
 			server.startServerStatisticsThread();
 			server.startThreadPoolManagerThread();
 			server.serverLoop();
@@ -106,32 +100,31 @@ public class Server {
 		}
 	}
 	
+	// start the thread for displaying server statistics
 	private void startServerStatisticsThread() {
-		// start the thread for displaying server statistics
 		new Thread(serverStatistics).start();
 	}
 	
+	// start the thread for the Thread Pool Manager
 	private void startThreadPoolManagerThread() {
-		// start the thread for displaying server statistics
 		new Thread(threadPoolManager).start();
 	}
 	
 	private void serverLoop() throws IOException {
 		while (true) {
-			//System.out.println("Listening for new connections or new messages.");
-			
-            // Block here
+			// Loop on selector
+			// Block here
             this.selector.select();
-            //System.out.println("\tActivity on selector!");
-            
+
             // Key(s) are ready
             Set<SelectionKey> selectedKeys = selector.selectedKeys();
-            // Loop over ready keys
+         // Loop over ready keys
             Iterator<SelectionKey> iter = selectedKeys.iterator();
             while (iter.hasNext()) {
-                // Grab current key
+            	// Grab current key
                 SelectionKey key = iter.next();
                 
+                // consider turning off syncing here as it may be causing overhead
                 synchronized (key) {
                 	// Optional
                     if(key.isValid() == false) { 
@@ -155,12 +148,12 @@ public class Server {
 	}
 	
 	private synchronized void register(Selector selector, ServerSocketChannel serverSocket) throws IOException {
-        // Grab the incoming socket from the serverSocket
+		// Grab the incoming socket from the serverSocket
         SocketChannel client = serverSocket.accept();
         // Configure it to be a new channel and key that our selector should monitor
         client.configureBlocking(false);
 
-        //SelectionKey key = client.register(selector, SelectionKey.OP_ACCEPT);
+        // create a new Throughput to attach to this Client for tracking its statistics
         Throughput throughput = serverStatistics.addClient();
         client.register(selector, SelectionKey.OP_READ, throughput);
         serverStatistics.incremementServerThroughput();
@@ -170,16 +163,6 @@ public class Server {
 	private static void readAndRespond(SelectionKey key) throws IOException {
 		// create a task to send to the client
 		Task task = new Task(key, serverStatistics, hash, threadPoolManager);
-		//synchronized (task) {
-			task.readTask();
-		//}
-		
-		// add the taks to the queue of things that the thread pool manager needs to do
-		//threadPoolManager.addTask(task);
-		
-		//threadPoolManager.improvedAddTask(task, key);
-		//threadPoolManager.assignTaskToWorkerThread();
-		//key.interestOps(SelectionKey.OP_READ);
+		task.readTask();
     }
-
 }

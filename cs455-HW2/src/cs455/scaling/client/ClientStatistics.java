@@ -8,8 +8,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class ClientStatistics implements Runnable {
 
 	private LinkedList<String> hashCodes;
-	private int messagesSent;
-	private int messagesReceived;
 	private static final long MESSAGE_RATE = 20;
 	private AtomicInteger messagesSentAtomic = new AtomicInteger(0);
 	private AtomicInteger messagesReceivedAtomic = new AtomicInteger(0);
@@ -17,24 +15,18 @@ public class ClientStatistics implements Runnable {
 	private final Object lock = new Object();
 	
 	public ClientStatistics() {
-		this.messagesSent = 0;
-		this.messagesReceived = 0;
 		this.hashCodes = new LinkedList<String>();
 	}
 	
-	public synchronized void incrementMessagesSent() {
-		this.messagesSent++;
+	public void incrementMessagesSent() {
 		this.messagesSentAtomic.incrementAndGet();
 	}
 	
-	public synchronized void incrementMessagesReceived() {
-		this.messagesReceived++;
+	public void incrementMessagesReceived() {
 		this.messagesReceivedAtomic.incrementAndGet();
 	}
 	
 	public synchronized void resetClientStatistics() {
-		this.messagesSent = 0;
-		this.messagesReceived = 0;
 		this.messagesSentAtomic.set(0);
 		this.messagesReceivedAtomic.set(0);
 	}
@@ -55,15 +47,12 @@ public class ClientStatistics implements Runnable {
 		}
 	}
 	
-	// testing with void instead of returning a boolean here
 	public void removeHashCode(String hashCode) {
 		synchronized(hashCodes) {
 			if (this.hashCodes.contains(hashCode)) {
 				this.hashCodes.remove(hashCode);
-				//return true;
 			}
 		}
-		//return false;
 	}
 	
 	/**
@@ -73,20 +62,18 @@ public class ClientStatistics implements Runnable {
 	 */
 	@Override
 	public void run() {
-		// Create the time we will wait until
+		// create the time we will wait until
 		LocalDateTime messageTime = LocalDateTime.now().plusSeconds(MESSAGE_RATE);
 		while(true) {
 			// get the current time
 			LocalDateTime now = LocalDateTime.now();
 			
-			// only print when it's been 20 seconds since the last message
+			// only print when it's been 20 seconds since the last message was printed
 			if (now.isAfter(messageTime)) {
 				messageTime = now.plusSeconds(MESSAGE_RATE);
 				
 				synchronized(lock) {
-					// [timestamp] Total Sent Count: x, Total Received Count: y
 					String currentClientMessage = "[" + messageTime.format(dateTimeFormat) + "]";
-					//currentClientMessage += "Total Sent Count: " + this.messagesSent + ", Total Received Count: " + this.messagesReceived;
 					currentClientMessage += "Total Sent Count: " + this.messagesSentAtomic.get() + ", Total Received Count: " + this.messagesReceivedAtomic.get();
 					System.out.println(currentClientMessage);
 					resetClientStatistics();

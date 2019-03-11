@@ -21,32 +21,27 @@ public class ServerStatistics implements Runnable {
 	private ArrayList<Throughput> activeClientsThroughputList;
 	private AtomicInteger activeClientsAtomic = new AtomicInteger(0);
 	private AtomicInteger serverThroughputAtomic = new AtomicInteger(0);
-	private int serverThroughput;
-	private int activeClients;
 	private final Object lock = new Object();
 	private final DateTimeFormatter dateTimeFormat = DateTimeFormatter.ofPattern("MM/dd/yy HH:mm:ss");;
 	
 	public ServerStatistics() {
 		this.activeClientsThroughputList = new ArrayList<Throughput>();
-		this.activeClients = 0;
-		this.serverThroughput = 0;
 	}
 	
-	public synchronized Throughput addClient() {
-			this.activeClients++;
+	public Throughput addClient() {
+		synchronized (activeClientsThroughputList) {
 			this.activeClientsAtomic.incrementAndGet();
 			Throughput throughput = new Throughput();
 			this.activeClientsThroughputList.add(throughput);
 			return throughput;
+		}
 	}
 
-	public synchronized void incremementServerThroughput() {
-		this.serverThroughput++;
+	public void incremementServerThroughput() {
 		this.serverThroughputAtomic.incrementAndGet();
 	}
 	
-	private synchronized void resetServerThroughput() {
-		this.serverThroughput = 0;
+	private void resetServerThroughput() {
 		this.serverThroughputAtomic.set(0);
 	}
 	
@@ -57,6 +52,7 @@ public class ServerStatistics implements Runnable {
             standardDeviation += Math.pow(num - mean, 2);
         }
 
+        // avoiding divide by 0
         if (throughputList.size() > 0) {
         	return Math.sqrt(standardDeviation/(throughputList.size()));
         } else {
@@ -77,10 +73,7 @@ public class ServerStatistics implements Runnable {
 					messageTime = now.plusSeconds(MESSAGE_RATE);
 					
 					synchronized (lock) {
-						
 						if (!this.activeClientsThroughputList.isEmpty()) {
-							// testing with the atomic variables referenced instead
-							//double runnableServerThroughput = this.serverThroughput / messageRate;
 							double runnableServerThroughput = this.serverThroughputAtomic.get() / MESSAGE_RATE;
 							
 							double totalClientThroughputSum = 0.0;
@@ -101,15 +94,10 @@ public class ServerStatistics implements Runnable {
 							
 							// calculate standard deviation
 							sdPerClientThroughput = calculateSD(throughputList, totalClientThroughputSum, meanPerClientThroughput);
-							
-							// message should look like the following: [timestamp] Server Throughput: x messages/s, Active Client Connections: y, Mean Per-client
-							// Throughput: p messages/s, Std. Dev. Of Per-client Throughput: q messages/s
+
 							String currentThroughputMessage = "[" + messageTime.format(dateTimeFormat) + "]";
-							// testing with the atomic variables referenced instead
-							//currentThroughputMessage += " Server Throughput: " + runnableServerThroughput + " messages/s, Active Client Connections: " + this.activeClients  + ", Mean Per-client" + 
-									//"Throughput: " + meanPerClientThroughput + " messages/s, Std. Dev. Of Per-client Throughput: " + sdPerClientThroughput + " messages/s";
 							currentThroughputMessage += " Server Throughput: " + runnableServerThroughput + " messages/s, Active Client Connections: " + this.activeClientsAtomic.get()  + ", Mean Per-client" + 
-									"Throughput: " + meanPerClientThroughput + " messages/s, Std. Dev. Of Per-client Throughput: " + sdPerClientThroughput + " messages/s";
+									" Throughput: " + meanPerClientThroughput + " messages/s, Std. Dev. Of Per-client Throughput: " + sdPerClientThroughput + " messages/s";
 							
 							System.out.println(currentThroughputMessage);
 							resetServerThroughput();
