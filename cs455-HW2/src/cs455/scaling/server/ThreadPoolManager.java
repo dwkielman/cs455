@@ -7,7 +7,6 @@ import java.util.LinkedList;
 /**
  * The server relies on the thread pool to perform all tasks. The threads within the thread pool should be, created just once.
  * Care must be taken to ensure that you are not inadvertently creating a new thread every time a task needs to be performed
- *
  */
 
 public class ThreadPoolManager implements Runnable {

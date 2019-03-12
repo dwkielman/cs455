@@ -5,6 +5,11 @@ import java.time.format.DateTimeFormatter;
 import java.util.LinkedList;
 import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * Once every 20 seconds after starting up, every client should print the number of messages it
+ * has sent and received during the last 20 seconds. This log message should look similar to the following.
+ * [timestamp] Total Sent Count: x, Total Received Count: y
+ */
 public class ClientStatistics implements Runnable {
 
 	private LinkedList<String> hashCodes;
@@ -54,12 +59,7 @@ public class ClientStatistics implements Runnable {
 			}
 		}
 	}
-	
-	/**
-	 * Once every 20 seconds after starting up, every client should print the number of messages it
-	 * has sent and received during the last 20 seconds. This log message should look similar to the following.
-	 * [timestamp] Total Sent Count: x, Total Received Count: y
-	 */
+
 	@Override
 	public void run() {
 		// create the time we will wait until

@@ -1,5 +1,8 @@
 package cs455.scaling.server;
 
+/**
+ * Threads that run the tasks when they are assigned by the ThreadPoolManager
+ */
 public class WorkerThread implements Runnable {
 	
 	private ThreadPool threadPool;

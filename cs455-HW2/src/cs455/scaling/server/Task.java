@@ -7,6 +7,10 @@ import java.nio.channels.SocketChannel;
 
 import cs455.scaling.hash.Hash;
 
+/**
+ * Server processes messages from Clients in the form of Tasks that are read by the Server, processed, and sent back to the Clients.
+ */
+
 public class Task {
 
 	private static final int BUFFER_SIZE = 8192;
