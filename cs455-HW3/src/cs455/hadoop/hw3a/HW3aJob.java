@@ -1,31 +1,29 @@
-package cs455.hadoop.hw3;
+package cs455.hadoop.hw3a;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.MultipleInputs;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
 import java.io.IOException;
 
-public class HW3Job {
+public class HW3aJob {
 	
 	public static void main(String[] args) {
 		
 		try {
             Configuration conf = new Configuration();
             // Give the MapRed job a name. You'll see this name in the Yarn webapp.
-            Job job = Job.getInstance(conf, "HW3");
+            Job job = Job.getInstance(conf, "HW3a");
             // Current class.
-            job.setJarByClass(HW3Job.class);
+            job.setJarByClass(HW3aJob.class);
             // Combiner
-            job.setCombinerClass(HW3Combiner.class);
+            job.setCombinerClass(HW3aCombiner.class);
             // Reducer
-            job.setReducerClass(HW3Reducer.class);
+            job.setReducerClass(HW3aReducer.class);
             // Outputs from the Mapper.
             job.setMapOutputKeyClass(Text.class);
             job.setMapOutputValueClass(Text.class);
@@ -38,8 +36,8 @@ public class HW3Job {
             Path p1 = new Path(args[0]);
             Path p2 = new Path(args[1]);
             
-            MultipleInputs.addInputPath(job, p1, TextInputFormat.class, HW3AnalysisMapper.class);
-            MultipleInputs.addInputPath(job, p2, TextInputFormat.class, HW3MetadataMapper.class);
+            MultipleInputs.addInputPath(job, p1, TextInputFormat.class, HW3aAnalysisMapper.class);
+            MultipleInputs.addInputPath(job, p2, TextInputFormat.class, HW3aMetadataMapper.class);
             // path to output in HDFS
             FileOutputFormat.setOutputPath(job, new Path(args[2]));
             // Block until the job is completed.

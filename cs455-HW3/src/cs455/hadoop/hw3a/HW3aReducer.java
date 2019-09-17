@@ -1,4 +1,4 @@
-package cs455.hadoop.hw3;
+package cs455.hadoop.hw3a;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -16,7 +16,7 @@ import cs455.hadoop.Util.Artist;
 import cs455.hadoop.Util.DataUtilities;
 import cs455.hadoop.Util.Song;
 
-public class HW3Reducer extends Reducer<Text, Text, Text, Text> {
+public class HW3aReducer extends Reducer<Text, Text, Text, Text> {
 	
 	private ArrayList<Song> songs;
 	private ArrayList<Double> startAverage;
@@ -123,11 +123,7 @@ public class HW3Reducer extends Reducer<Text, Text, Text, Text> {
         		} else if (parts[0].equals("TEMPO")) {
         			songTempo = DataUtilities.doubleReader(parts[1]);
         		} else if (parts[0].equals("SONGTERMS")) {
-        			String songTermsArray[] = parts[1].split(" ");
-        			for (int j = 0; j < songTermsArray.length; j++) {
-        				terms.add(songTermsArray[j]);
-        			}
-        			//terms = DataUtilities.dataReader(parts[1]);
+        			terms = DataUtilities.dataReader(parts[1]);
         		} else if (parts[0].equals("LOCATION")) {
         			if (parts[1].equals("b''")) {
         				location = "HW3NA";
@@ -425,214 +421,6 @@ public class HW3Reducer extends Reducer<Text, Text, Text, Text> {
 			}
 		} else {
 			context.write(new Text("No Danceable or Energetic Songs Found."), new Text("Due to there being " + danceableSongs.size() + " number of Danceable & Energetic Songs"));
-		}
-		
-		/**
-		 * Q7: Create segment data for the average song. Include start time, pitch, timbre, max loudness, max loudness time, and start loudness.
-		 * 
-		 */
-		context.write(new Text("QUESTION 7: "), new Text("Create segment data for the average song. Include start time, pitch, timbre, max loudness, max loudness time, and start loudness."));
-		
-		if (startAverage.size() > 0) {
-			double startAverageNumber = DataUtilities.getAverageValue(startAverage);
-			context.write(new Text("Start Average"), new Text("Value: " + startAverageNumber));
-		}
-		
-		if (pitchAverage.size() > 0) {
-			double pitchAverageNumber = DataUtilities.getAverageValue(pitchAverage);
-			context.write(new Text("Pitch Average"), new Text("Value: " + pitchAverageNumber));
-		}
-		
-		if (timbreAverage.size() > 0) {
-			double timbreAverageNumber = DataUtilities.getAverageValue(timbreAverage);
-			context.write(new Text("Timbre Average"), new Text("Value: " + timbreAverageNumber));
-		}
-		
-		if (loudnessMaxAverage.size() > 0) {
-			double loudnessMaxAverageNumber = DataUtilities.getAverageValue(loudnessMaxAverage);
-			context.write(new Text("Loudness Max Average"), new Text("Value: " + loudnessMaxAverageNumber));
-		}
-		
-		if (loudnessStartAverage.size() > 0) {
-			double loudnessStartAverageNumber = DataUtilities.getAverageValue(loudnessStartAverage);
-			context.write(new Text("Loudness Start Average"), new Text("Value: " + loudnessStartAverageNumber));
-		}
-		
-		/**
-		 * Q8: Which artist is the most generic? Which artist is the most unique?
-		 * 
-		 */
-		double songHotttnessAverage = 0.0;
-		double artistFamiliarityAverage = 0.0;
-		double artistHotttnesssAverage = 0.0;
-		
-		double lowestSongHottnesss = songHotttnessList.stream().min(Comparator.naturalOrder()).get();
-		double highestArtistHottnesss = artistHotttnesssList.stream().max(Comparator.naturalOrder()).get();
-		double lowestArtistHottnesss = artistHotttnesssList.stream().min(Comparator.naturalOrder()).get();
-		double highestArtistFamiliarity = artistFamiliarityList.stream().max(Comparator.naturalOrder()).get();
-		double lowestArtistFamiliarity = artistFamiliarityList.stream().min(Comparator.naturalOrder()).get();
-		
-		if (songHotttnessList.size() > 0) {
-			songHotttnessAverage = DataUtilities.getAverageValue(songHotttnessList);
-		}
-		if (artistFamiliarityList.size() > 0) {
-			artistFamiliarityAverage = DataUtilities.getAverageValue(artistFamiliarityList);
-		}
-		if (artistHotttnesssList.size() > 0) {
-			artistHotttnesssAverage = DataUtilities.getAverageValue(artistHotttnesssList);
-		}
-		
-		double averageArtistHottnesssMin = (artistHotttnesssAverage - 0.1);
-		double averageArtistHottnesssMax = (artistHotttnesssAverage + 0.1);
-		double averageSongHottnesssMin = (songHotttnessAverage - 0.1);
-		double averageSongHottnesssMax = (songHotttnessAverage + 0.1);
-		double averageArtistFamiliarityMin = (artistFamiliarityAverage - 0.1);
-		double averageArtistFamiliarityMax = (artistFamiliarityAverage + 0.1);
-		
-		ArrayList<Song> genericSongs = new ArrayList<Song>();
-		ArrayList<Song> uniqueSongs = new ArrayList<Song>();
-		
-		for (Song s : songs) {
-			if (((s.getArtistHotttness() >= averageArtistHottnesssMin && s.getArtistHotttness() <= averageArtistHottnesssMax) ||
-			(s.getSongHotttnesssDouble() >=  averageSongHottnesssMin && s.getSongHotttnesssDouble() <= averageSongHottnesssMax) ||
-			((s.getArtistFamiliarity() >= averageArtistFamiliarityMin && s.getArtistFamiliarity() <= averageArtistFamiliarityMax) || s.getArtistFamiliarity() > (highestArtistFamiliarity - 0.1))) && 
-			(s.getTimeSignatureDouble() % 2 == 0)) {
-				genericSongs.add(s);
-			} else if (((s.getArtistHotttness() > (highestArtistHottnesss - 0.1) || s.getArtistHotttness() < (lowestArtistHottnesss + 0.1)) || 
-					(s.getSongHotttnesssDouble() > (maximumSongHotttnesss - 0.1) || s.getSongHotttnesssDouble() < (lowestSongHottnesss - 0.1)) ||
-					(s.getArtistFamiliarity() < (lowestArtistFamiliarity + 0.1)))) {
-						uniqueSongs.add(s);
-			}
-		}
-		
-		Map<String, List<Song>> genericSongsGrouped = genericSongs.stream().collect(Collectors.groupingBy(s -> s.getArtistID()));
-		Map<String, List<Song>> uniqueSongsGrouped = uniqueSongs.stream().collect(Collectors.groupingBy(s -> s.getArtistID()));
-
-		context.write(new Text("QUESTION 8: "), new Text("Which artist is the most generic? Which artist is the most unique?"));
-		
-		counter = 3;
-		
-		if (genericSongsGrouped.size() > 0) {
-			if (genericSongsGrouped.size() < 3) {
-				counter = genericSongsGrouped.size();
-			}
-			context.write(new Text("GENERIC ARTISTS:"), new Text("Determind by having songs that have average artist hotttness, average song hottness, high artist familiarity and a generic time signature of 2"));
-			for (int i = 0; i < counter; i++) {
-				String artistID = genericSongsGrouped.entrySet().stream().max((a1, a2) -> a1.getValue().size() > a2.getValue().size() ? 1 : -1).get().getKey();
-				List<Song> songs = genericSongsGrouped.get(artistID);
-				int numOfSongs = songs.size();
-				String artistName = songs.get(0).getArtistName();
-				context.write(new Text("Most Generic Artist:"), new Text("Artst: " + artistName + " with " + numOfSongs + " generic Songs."));
-				genericSongsGrouped.remove(artistID, songs);
-			}
-		}
-		
-		counter = 3;
-		
-		if (uniqueSongsGrouped.size() > 0) {
-			if (uniqueSongsGrouped.size() < 3) {
-				counter = uniqueSongsGrouped.size();
-			}
-			context.write(new Text("UNIQUE ARTISTS:"), new Text("Determind by having songs that have extreme high or low artist hottness, extreme high or low song hottness and low artist familiarity"));
-			for (int i = 0; i < counter; i++) {
-				String artistID = uniqueSongsGrouped.entrySet().stream().max((a1, a2) -> a1.getValue().size() > a2.getValue().size() ? 1 : -1).get().getKey();
-				List<Song> songs = uniqueSongsGrouped.get(artistID);
-				int numOfSongs = songs.size();
-				String artistName = songs.get(0).getArtistName();
-				context.write(new Text("Most Unique  Artist:"), new Text("Artst: " + artistName + " with " + numOfSongs + " unique Songs."));
-				uniqueSongsGrouped.remove(artistID, songs);
-			}
-		}
-		
-		/**
-		 * Q9: Imagine a song with a higher hotttnesss score than the song in your answer to Q3. List this songs tempo, 
-		 * time signature, danceability, duration, mode, energy, key, loudness, when it stops fading in, when it starts 
-		 * fading out, and which terms describe the artist who made it. Give both the song and the artist who made it unique names.
-		 */
-		ArrayList<Song> hottestSongs = new ArrayList<Song>();
-		
-		songs.sort(Comparator.comparingDouble(Song::getSongHotttnesssDouble));
-		Collections.reverse(songs);
-
-		for (Song s : songs) {
-			if ((s.getSongHotttnesssDouble() <= maximumSongHotttnesss) && (s.getSongHotttnesssDouble() >= (maximumSongHotttnesss - 0.01))) {
-				hottestSongs.add(s);
-			}
-		}
-		
-		if (!hottestSongs.isEmpty()) {
-			double highestDanceability = hottestSongs.stream().max(Comparator.comparing(s -> ((Song) s).getDanceabilityDouble())).get().getDanceabilityDouble();
-			double longestDuration = hottestSongs.stream().max(Comparator.comparing(s -> ((Song) s).getDurationDouble())).get().getDurationDouble();
-			double longestFadeInTime = hottestSongs.stream().max(Comparator.comparing(s -> ((Song) s).getFadeInEndTime())).get().getFadeInEndTime();
-			double highestEnergy = hottestSongs.stream().max(Comparator.comparing(s -> ((Song) s).getEnergyDouble())).get().getEnergyDouble();
-			double highestSongKey = hottestSongs.stream().max(Comparator.comparing(s -> ((Song) s).getSongKey())).get().getSongKey();
-			double highestMode = hottestSongs.stream().max(Comparator.comparing(s -> ((Song) s).getSongMode())).get().getSongMode();
-			double highestTempo = hottestSongs.stream().max(Comparator.comparing(s -> ((Song) s).getSongTempo())).get().getSongTempo();
-			double highestTimeSignature = hottestSongs.stream().max(Comparator.comparing(s -> ((Song) s).getTimeSignatureDouble())).get().getTimeSignatureDouble();
-			double highestLoudness = hottestSongs.stream().max(Comparator.comparing(s -> ((Song) s).getLoudnessDouble())).get().getLoudnessDouble();
-			double highestFadeOutDuration = hottestSongs.stream().max(Comparator.comparing(s -> ((Song) s).getFadeOutTime())).get().getFadeOutTime();
-			double longestFadeOutStart = longestDuration - highestFadeOutDuration;
-			
-			ArrayList<String> hottestSongTerms = new ArrayList<String>();
-			
-			for (Song s : hottestSongs) {
-				ArrayList<String> sTerms = s.getTerms();
-				for (String t : sTerms) {
-					if (!hottestSongTerms.contains(t)) {
-						hottestSongTerms.add(t);
-					}
-				}
-			}
-
-			String termsString = "";
-			
-			if (!hottestSongTerms.isEmpty()) {
-				termsString = String.join(", ", hottestSongTerms);
-			}
-			
-			context.write(new Text("QUESTION 9: "), new Text("Imagine a song with a higher hotttnesss score than the song in your answer to Q3. List this songs tempo, "
-					+ "time signature, danceability, duration, mode, energy, key, loudness, when it stops fading in, when it starts fading out, and which terms describe "
-					+ "the artist who made it. Give both the song and the artist who made it unique names."));
-			context.write(new Text("The hottest song was created via analysing " + hottestSongs.size() + " number of hottest songs."), new Text(""));
-			context.write(new Text("Song Name: The Hottest Song Ever, Artist: The Hotties"), new Text("Song Metrics: Danceability: " + highestDanceability + "\tDuration: " + longestDuration + "\tFade In Ends: " + longestFadeInTime + "\tEnergy: " + highestEnergy
-					 + "\tKey: " + highestSongKey + "\tMode: " + highestMode + "\tTempo: " + highestTempo + "\tTime Signature: " + highestTimeSignature + "\tLoudness: " + highestLoudness + "\tFade Out Starts: " + longestFadeOutStart
-					 + "\tTerms: " + termsString));
-		}
-		
-		/**
-		 * Q10: Come up with an interesting question of your own to answer. This question should be more complex than Q7, Q8 or Q9. Answer it.
-		 * For this component, think of yourself as the lead data scientist at a start-up firm. What would do with this dataset that is cool?
-		 * You are allowed to: (1) combine your analysis with other datasets, (2) use other frameworks
-		 */
-		ArrayList<Song> hottestSongsPerYear = new ArrayList<Song>();
-		
-		songs.sort(Comparator.comparingInt(Song::getYear));	
-		Collections.reverse(songs);
-		
-		years.sort(Comparator.naturalOrder());
-		Collections.reverse(years);
-
-		for (int y : years) {
-			List<Song> songsInYear = songs.stream().filter(s -> s.getYear() == y).collect(Collectors.toList());
-			songsInYear.sort(Comparator.comparingDouble(Song::getSongHotttnesssDouble));
-			Collections.reverse(songsInYear);
-			
-			List<Song> first10Songs = songsInYear.stream().filter(s -> !s.getCityDetails().equals("HW3NA")).limit(SONGS_PER_YEAR).collect(Collectors.toList());
-
-			for (Song s : first10Songs) {
-				hottestSongsPerYear.add(s);
-			}
-		}
-
-		context.write(new Text("QUESTION 10: "), new Text("Come up with an interesting question of your own to answer. This question should be more complex than Q7, Q8 or Q9. Answer it."
-				+ "Do the hottest songs in a given year originate from a singular location? Essentially, is there a correlation between the top 10 hottest songs in a given year and their location?"
-				+ "\nI have below the list of the 10 hottest songs in a given year, their locations and metrics on said songs."));
-		if (!hottestSongsPerYear.isEmpty()) {
-			for (Song s : hottestSongsPerYear) {
-				context.write(new Text("Year: " + s.getYear()), new Text("Location: " + s.getCityDetails() + "\t\tSong Title: " + s.getSongTitle() + " by " + s.getArtistName() + "\t Song Hotttnesss: " + s.getSongHotttnesssDouble() + ", Artist Hotttnesss: " + s.getArtistHotttness()));
-			}
-		} else {
-			context.write(new Text("No hottest songs per year were found"), new Text("Try again Daniel."));
 		}
 	}
 

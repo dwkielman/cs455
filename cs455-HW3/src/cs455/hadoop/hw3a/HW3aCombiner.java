@@ -1,15 +1,14 @@
-package cs455.hadoop.hw3;
+package cs455.hadoop.hw3a;
 
 import java.io.IOException;
 import java.util.ArrayList;
 
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Reducer;
-import org.apache.hadoop.mapreduce.Reducer.Context;
 
 import cs455.hadoop.Util.DataUtilities;
 
-public class HW3Combiner extends Reducer<Text, Text, Text, Text> {
+public class HW3aCombiner extends Reducer<Text, Text, Text, Text> {
 	
 	private final StringBuilder sb = new StringBuilder();
 	private final Text output = new Text();

@@ -1,47 +1,50 @@
-package cs455.hadoop.hw3;
+package cs455.hadoop.q01;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
-import org.apache.hadoop.mapreduce.lib.input.MultipleInputs;
-import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+
+import cs455.hadoop.Util.Artist;
 
 import java.io.IOException;
 
-public class HW3Job {
+public class Q1Job {
 	
-	public static void main(String[] args) {
+public static void main(String[] args) {
 		
 		try {
             Configuration conf = new Configuration();
             // Give the MapRed job a name. You'll see this name in the Yarn webapp.
-            Job job = Job.getInstance(conf, "HW3");
+            Job job = Job.getInstance(conf, "Q1");
             // Current class.
-            job.setJarByClass(HW3Job.class);
-            // Combiner
-            job.setCombinerClass(HW3Combiner.class);
+            job.setJarByClass(Q1Job.class);
+            // Mapper
+            job.setMapperClass(Q1Mapper.class);
+            // Combiner. We use the reducer as the combiner in this case.
+            job.setCombinerClass(Q1Reducer.class);
             // Reducer
-            job.setReducerClass(HW3Reducer.class);
+            job.setReducerClass(Q1Reducer.class);
             // Outputs from the Mapper.
             job.setMapOutputKeyClass(Text.class);
-            job.setMapOutputValueClass(Text.class);
+            job.setMapOutputValueClass(LongWritable.class);
+            //job.setMapOutputKeyClass(Text.class);
+            //job.setMapOutputValueClass(Text.class);
             // Outputs from Reducer. It is sufficient to set only the following two properties
             // if the Mapper and Reducer has same key and value types. It is set separately for
             // elaboration.
+            //job.setOutputKeyClass(Text.class);
             job.setOutputKeyClass(Text.class);
-            job.setOutputValueClass(Text.class);
+            job.setOutputValueClass(LongWritable.class);
+            //job.setOutputValueClass(Text.class);
             // path to input in HDFS
-            Path p1 = new Path(args[0]);
-            Path p2 = new Path(args[1]);
-            
-            MultipleInputs.addInputPath(job, p1, TextInputFormat.class, HW3AnalysisMapper.class);
-            MultipleInputs.addInputPath(job, p2, TextInputFormat.class, HW3MetadataMapper.class);
+            FileInputFormat.addInputPath(job, new Path(args[0]));
             // path to output in HDFS
-            FileOutputFormat.setOutputPath(job, new Path(args[2]));
+            FileOutputFormat.setOutputPath(job, new Path(args[1]));
             // Block until the job is completed.
             System.exit(job.waitForCompletion(true) ? 0 : 1);
         } catch (IOException e) {

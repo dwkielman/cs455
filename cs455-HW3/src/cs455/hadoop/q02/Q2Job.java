@@ -1,31 +1,33 @@
-package cs455.hadoop.hw3;
-
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.IntWritable;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
-import org.apache.hadoop.mapreduce.lib.input.MultipleInputs;
-import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
-import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+package cs455.hadoop.q02;
 
 import java.io.IOException;
 
-public class HW3Job {
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.FloatWritable;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.lib.input.MultipleInputs;
+
+import cs455.hadoop.Util.Artist;
+
+public class Q2Job {
 	
-	public static void main(String[] args) {
-		
+	 public static void main(String[] args) throws Exception {
+
 		try {
             Configuration conf = new Configuration();
             // Give the MapRed job a name. You'll see this name in the Yarn webapp.
-            Job job = Job.getInstance(conf, "HW3");
+            Job job = Job.getInstance(conf, "Q2");
             // Current class.
-            job.setJarByClass(HW3Job.class);
+            job.setJarByClass(Q2Job.class);
             // Combiner
-            job.setCombinerClass(HW3Combiner.class);
+            job.setCombinerClass(Q2Combiner.class);
             // Reducer
-            job.setReducerClass(HW3Reducer.class);
+            job.setReducerClass(Q2Reducer.class);
             // Outputs from the Mapper.
             job.setMapOutputKeyClass(Text.class);
             job.setMapOutputValueClass(Text.class);
@@ -38,8 +40,8 @@ public class HW3Job {
             Path p1 = new Path(args[0]);
             Path p2 = new Path(args[1]);
             
-            MultipleInputs.addInputPath(job, p1, TextInputFormat.class, HW3AnalysisMapper.class);
-            MultipleInputs.addInputPath(job, p2, TextInputFormat.class, HW3MetadataMapper.class);
+            MultipleInputs.addInputPath(job, p1, TextInputFormat.class, Q2AnalysisMapper.class);
+            MultipleInputs.addInputPath(job, p2, TextInputFormat.class, Q2MetadataMapper.class);
             // path to output in HDFS
             FileOutputFormat.setOutputPath(job, new Path(args[2]));
             // Block until the job is completed.
@@ -51,7 +53,6 @@ public class HW3Job {
         } catch (ClassNotFoundException e) {
             System.err.println(e.getMessage());
         }
-		
 	}
 
 }
